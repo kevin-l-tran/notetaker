@@ -1,0 +1,242 @@
+/* Overlay */
+.editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+
+/* Modal shell */
+.editor-modal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Header */
+.editor-modal-header {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+.editor-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.editor-modal-close {
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Content layout */
+.editor-modal-content {
+  flex: 1;
+  position: relative;
+  display: flex;
+  min-height: 0;
+}
+
+/* Left panel */
+.editor-left-panel {
+  min-width: 220px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Form toggle bar */
+.editor-form-toggle {
+  padding: 2px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  cursor: pointer;
+  user-select: none;
+  background: #f3f4f6;
+}
+
+/* Arrow icon */
+.editor-form-arrow {
+  font-size: 16px;
+  line-height: 1;
+  text-align: center;
+  transition: transform 120ms ease-out;
+}
+
+/* Form body */
+.editor-form-body {
+  padding: 10px 16px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.editor-form-group {
+  margin-bottom: 8px;
+}
+
+.editor-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 4px;
+}
+
+.editor-label--sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.editor-input {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.editor-error {
+  font-size: 10px;
+  color: red;
+}
+
+/* Aliases list */
+.editor-aliases {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  margin: 0 0 8px;
+}
+
+.editor-aliases legend.editor-label {
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.editor-alias-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor-alias-remove {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.editor-alias-add {
+  margin-top: 4px;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #e5e7eb;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Splitter */
+.editor-splitter {
+  width: 6px;
+  cursor: col-resize;
+  background: #e5e7eb;
+}
+
+/* Right panel */
+.editor-right-panel {
+  flex: 1;
+  min-width: 220px;
+  padding: 16px;
+  overflow: auto;
+}
+
+.editor-preview-card {
+  box-sizing: border-box;
+  width: 100%;
+  border: 2px solid;
+  border-radius: 10px;
+  display: block;
+}
+
+/* Footer */
+.editor-modal-footer {
+  height: 44px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 16px;
+  gap: 8px;
+}
+
+.editor-primary-button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: #2563EB;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editor-primary-button:hover {
+  background-color: #034be6;
+}
+
+.editor-secondary-button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border-width: 1px;
+  border-color: #D1D5DB;
+  background: #F3F4F6;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Resize handle */
+.editor-resize-handle {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  opacity: 0.7;
+  background: linear-gradient(135deg,
+      transparent 0 40%,
+      #cbd5e1 40% 60%,
+      transparent 60% 100%);
+}
