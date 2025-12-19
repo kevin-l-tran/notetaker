@@ -68,7 +68,7 @@ export default function App() {
     };
 
     const handleSaveToFile = () => {
-        const data = { definitionNodes };
+        const data = Object.fromEntries(definitionNodes);
 
         const json = JSON.stringify(data, null, 2);
         const blob = new Blob([json], { type: "application/json" });
