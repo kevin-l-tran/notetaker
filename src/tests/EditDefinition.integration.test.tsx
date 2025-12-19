@@ -1,8 +1,20 @@
-import { useEffect, useState } from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { useEffect } from "react";
+import {
+    describe,
+    it,
+    expect,
+    vi,
+    beforeEach,
+    afterEach,
+    type MockInstance,
+} from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import type {
+    DefinitionDraft,
+    DefinitionNode,
+} from "../models/definitionNodes";
 import useDefinitionStore from "../hooks/useDefinitionStore";
 import useDefinitionGraph from "../hooks/useDefinitionGraph";
 import DefinitionEditorForm from "../components/DefinitionEditorForm";
@@ -10,17 +22,26 @@ import DefinitionEditorForm from "../components/DefinitionEditorForm";
 // --- Lightweight mocks for child components ---------------------------------
 
 vi.mock("../components/LatexEditor", () => ({
-    default: ({ description, onChange }: any) => (
+    default: ({
+        description,
+        onChange,
+    }: {
+        description: string;
+        onChange: (value: string) => void;
+        ariaLabelledBy?: string;
+    }) => (
         <textarea
             aria-label="Description"
             value={description}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+                onChange(e.target.value);
+            }}
         />
     ),
 }));
 
 vi.mock("../components/DefinitionCard", () => ({
-    default: ({ draft }: any) => (
+    default: ({ draft }: { draft: DefinitionDraft }) => (
         <div data-testid="definition-preview">
             <h2>{draft.label}</h2>
         </div>
@@ -29,24 +50,26 @@ vi.mock("../components/DefinitionCard", () => ({
 
 // --- Initial node data used by the test -----------------------------------
 
-const INITIAL_NODES = {
-    metric: {
-        id: "metric",
-        label: "Metric space",
-        aliases: [] as string[],
-        description: "A metric space is usually denoted (X, d).",
-        createdAt: "",
-        updatedAt: "",
-    },
-    topology: {
-        id: "topology",
-        label: "Topology",
-        aliases: [] as string[],
-        description: "A topology can be defined using a metric space.",
-        createdAt: "",
-        updatedAt: "",
-    },
-} as const;
+const INITIAL_NODES = new Map<string, DefinitionNode>(
+    Object.entries({
+        metric: {
+            id: "metric",
+            label: "Metric space",
+            aliases: [] as string[],
+            description: "A metric space is usually denoted (X, d).",
+            createdAt: "",
+            updatedAt: "",
+        },
+        topology: {
+            id: "topology",
+            label: "Topology",
+            aliases: [] as string[],
+            description: "A topology can be defined using a metric space.",
+            createdAt: "",
+            updatedAt: "",
+        },
+    })
+);
 
 // --- Test harness wiring store + editor + graph ---------------------------
 
@@ -54,14 +77,12 @@ function EditDefinitionHarness() {
     const { definitionNodes, loadDefinitionNodes, editNode } =
         useDefinitionStore();
     const { definitionGraphEdges } = useDefinitionGraph(definitionNodes);
-    const [initialized, setInitialized] = useState(false);
 
     useEffect(() => {
-        loadDefinitionNodes({ definitionNodes: INITIAL_NODES as any });
-        setInitialized(true);
-    }, []);
+        loadDefinitionNodes(INITIAL_NODES);
+    }, [loadDefinitionNodes]);
 
-    const nodeToEdit = initialized ? definitionNodes["metric"] : null;
+    const nodeToEdit = definitionNodes.get("metric") ?? null;
 
     return (
         <div>
@@ -74,7 +95,9 @@ function EditDefinitionHarness() {
                         aliases: nodeToEdit.aliases,
                         description: nodeToEdit.description,
                     }}
-                    onClose={() => {}}
+                    onClose={() => {
+                        /* empty */
+                    }}
                     onSubmit={(draft) =>
                         editNode({
                             id: nodeToEdit.id,
@@ -90,10 +113,10 @@ function EditDefinitionHarness() {
 
             {/* Expose descriptions and derived edges so the test can assert on them */}
             <pre aria-label="metric-description">
-                {definitionNodes["metric"]?.description ?? ""}
+                {definitionNodes.get("metric")?.description ?? ""}
             </pre>
             <pre aria-label="topology-description">
-                {definitionNodes["topology"]?.description ?? ""}
+                {definitionNodes.get("topology")?.description ?? ""}
             </pre>
 
             <ul aria-label="edges-list">
@@ -107,7 +130,7 @@ function EditDefinitionHarness() {
 
 // --- The actual integration test ------------------------------------------
 
-let confirmSpy: any;
+let confirmSpy: MockInstance<typeof window.confirm>;
 
 describe("edit existing node + link generation", () => {
     beforeEach(() => {

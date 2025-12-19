@@ -45,12 +45,11 @@ export default function autoInsertLinks(
     const chosen = pickNonOverlapping(bounded);
     chosen.sort((a, b) => a.start - b.start);
 
-    const ids: Set<NodeId> = new Set();
+    const ids = new Set<NodeId>();
     const currentLinks = getIncomingMatches(id, text, terms);
-    const matches = [];
+    const matches: typeof chosen = [];
     for (const m of currentLinks) {
-        const id = terms.get(m.key);
-        if (id) ids.add(id);
+        ids.add(m.from);
     }
     for (const m of chosen) {
         const termId = terms.get(m.key);

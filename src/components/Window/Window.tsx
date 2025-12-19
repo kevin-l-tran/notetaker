@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type Props = {
     title: string;
     children: React.ReactNode;
-    initialPosition: {
+    defaultPosition: {
         x: number;
         y: number;
     };
-    initialSize: {
+    defaultSize: {
         w: number;
         h: number;
     };
@@ -20,8 +20,8 @@ type Props = {
 function Window({
     title,
     children,
-    initialPosition,
-    initialSize,
+    defaultPosition,
+    defaultSize,
     onClose,
     zIndex = 1,
     onFocus,
@@ -30,17 +30,17 @@ function Window({
     const isDragging = useRef(false);
     const isResizing = useRef(false);
     const mousePos = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-    const sizeRef = useRef<{ w: number; h: number }>(initialSize);
+    const sizeRef = useRef<{ w: number; h: number }>(defaultSize);
     const [position, setPosition] = useState<{ x: number; y: number }>(
-        initialPosition
+        defaultPosition
     );
-    const [size, setSize] = useState<{ w: number; h: number }>(initialSize);
+    const [size, setSize] = useState<{ w: number; h: number }>(defaultSize);
     const [isMinimized, setIsMinimized] = useState(false);
 
     // --- Dragging logic ----------------------------------------------------
     const onDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
         e.preventDefault();
-        onFocus?.();
+        if (!isActive) onFocus?.();
         e.stopPropagation();
         isDragging.current = true;
         mousePos.current = {
@@ -50,7 +50,7 @@ function Window({
         document.body.style.cursor = "move";
     };
 
-    const onDragMove = (e: MouseEvent) => {
+    const onDragMove = useCallback((e: MouseEvent) => {
         if (!isDragging.current) return;
         const x = Math.min(
             Math.max(0, e.clientX - mousePos.current.x),
@@ -61,13 +61,13 @@ function Window({
             window.innerHeight - 40
         );
         setPosition({ x, y });
-    };
+    }, []);
 
-    const onDragEnd = () => {
+    const onDragEnd = useCallback(() => {
         if (!isDragging.current) return;
         isDragging.current = false;
         document.body.style.cursor = "";
-    };
+    }, []);
 
     useEffect(() => {
         window.addEventListener("mousemove", onDragMove);
@@ -75,13 +75,15 @@ function Window({
         return () => {
             window.removeEventListener("mousemove", onDragMove);
             window.removeEventListener("mouseup", onDragEnd);
+            isDragging.current = false;
+            document.body.style.cursor = "";
         };
     }, [onDragMove, onDragEnd]);
 
     // --- Resizing logic ----------------------------------------------------
     const onResizeStart = (e: React.MouseEvent) => {
         if (isMinimized) return;
-        onFocus?.();
+        if (!isActive) onFocus?.();
         e.preventDefault();
         e.stopPropagation();
         isResizing.current = true;
@@ -90,7 +92,7 @@ function Window({
         document.body.style.cursor = "nwse-resize";
     };
 
-    const onResizeMove = (e: MouseEvent) => {
+    const onResizeMove = useCallback((e: MouseEvent) => {
         if (!isResizing.current) return;
         const dx = e.clientX - mousePos.current.x;
         const dy = e.clientY - mousePos.current.y;
@@ -103,13 +105,13 @@ function Window({
             Math.max(300, sizeRef.current.h + dy)
         );
         setSize({ w, h });
-    };
+    }, []);
 
-    const onResizeEnd = () => {
+    const onResizeEnd = useCallback(() => {
         if (!isResizing.current) return;
         isResizing.current = false;
         document.body.style.cursor = "";
-    };
+    }, []);
 
     useEffect(() => {
         window.addEventListener("mousemove", onResizeMove);
@@ -117,6 +119,8 @@ function Window({
         return () => {
             window.removeEventListener("mousemove", onResizeMove);
             window.removeEventListener("mouseup", onResizeEnd);
+            isResizing.current = false;
+            document.body.style.cursor = "";
         };
     }, [onResizeMove, onResizeEnd]);
 
@@ -133,7 +137,7 @@ function Window({
 
     // ------ focus actions --------------------------------------------------
     const handleRootMouseDown = () => {
-        onFocus?.();
+        if (!isActive) onFocus?.();
     };
 
     return (
@@ -185,9 +189,7 @@ function Window({
                     <button
                         type="button"
                         aria-label={
-                            isMinimized
-                                ? "Restore definition"
-                                : "Minimize definition"
+                            isMinimized ? "Restore window" : "Minimize window"
                         }
                         onClick={toggleMinimize}
                         style={{
@@ -210,7 +212,7 @@ function Window({
 
                     <button
                         type="button"
-                        aria-label="Close definition"
+                        aria-label="Close window"
                         onClick={handleClose}
                         style={{
                             border: "none",
@@ -238,7 +240,7 @@ function Window({
                     style={{
                         flex: 1,
                         overflow: "auto",
-                        pointerEvents: isActive ? "auto" : "none",
+                        pointerEvents: "auto",
                     }}
                 >
                     {children}

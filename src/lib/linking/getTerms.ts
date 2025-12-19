@@ -12,12 +12,12 @@ import type { NodeId } from "../../models/nodes";
  * - Skips empty terms after trimming.
  */
 export function getDefinitionTerms(
-    definitionNodes: Record<string, DefinitionNode>,
+    definitionNodes: ReadonlyMap<string, DefinitionNode>,
     excludeId?: NodeId
 ): Map<string, NodeId> {
-    const terms: Map<string, NodeId> = new Map();
+    const terms = new Map<string, NodeId>();
 
-    for (const node of Object.values(definitionNodes)) {
+    for (const node of Array.from(definitionNodes.values())) {
         if (excludeId && node.id === excludeId) continue;
 
         const id = node.id;

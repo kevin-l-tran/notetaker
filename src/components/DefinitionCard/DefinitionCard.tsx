@@ -24,6 +24,10 @@ const OVERRIDE_CSS = `
         padding: 0;
         cursor: pointer;
     }
+    .node-link:focus-visible {
+        outline: 2px solid #000;
+        outline-offset: 2px;
+    }
     `;
 
 type Props = {
@@ -34,6 +38,48 @@ type Props = {
     ) => void;
 };
 
+type LatexParseError = {
+    message?: string;
+    location?: {
+        start: { line: number; column: number };
+    };
+};
+
+function isLatexParseError(e: unknown): e is LatexParseError {
+    if (typeof e !== "object" || e === null) {
+        return false;
+    }
+    
+    if (!("location" in e)) {
+        return false;
+    }
+
+    const location = (e as { location: unknown }).location;
+
+    if (
+        typeof location !== "object" ||
+        location === null ||
+        !("start" in location)
+    ) {
+        return false;
+    }
+
+    const start = (location as { start: unknown }).start;
+
+    if (
+        typeof start !== "object" ||
+        start === null ||
+        !("line" in start) ||
+        !("column" in start)
+    ) {
+        return false;
+    }
+
+    const { line, column } = start as { line: unknown; column: unknown };
+
+    return typeof line === "number" && typeof column === "number";
+}
+
 function DefinitionCard({ draft, onLinkClick }: Props) {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const shadowRef = useRef<ShadowRoot | null>(null);
@@ -42,9 +88,7 @@ function DefinitionCard({ draft, onLinkClick }: Props) {
         const host = hostRef.current;
         if (!host) return;
 
-        if (!shadowRef.current) {
-            shadowRef.current = host.attachShadow({ mode: "open" });
-        }
+        shadowRef.current ??= host.attachShadow({ mode: "open" });
         const shadow = shadowRef.current;
 
         while (shadow.firstChild) shadow.removeChild(shadow.firstChild);
@@ -72,18 +116,24 @@ function DefinitionCard({ draft, onLinkClick }: Props) {
             page.className = "latex-root";
             page.appendChild(contentFrag);
             shadow.appendChild(page);
-        } catch (e: any) {
+        } catch (e: unknown) {
             const pre = document.createElement("pre");
             console.error(e);
-            if ((e as any).location) {
+
+            if (isLatexParseError(e) && e.location) {
                 const { start } = e.location;
                 const lines = draft.description.split(/\r?\n/);
                 const lineText = lines[start.line - 1] ?? "";
                 const pointer = "-".repeat(Math.max(0, start.column - 1)) + "^";
 
+                const message =
+                    "message" in e && typeof e.message === "string"
+                        ? e.message
+                        : JSON.stringify(e);
+
                 pre.textContent =
                     `LaTeX parse error on line ${start.line}, column ${start.column}:\n` +
-                    `${e.message}\n\n` +
+                    `${message}\n\n` +
                     lineText +
                     "\n" +
                     pointer;
@@ -100,17 +150,15 @@ function DefinitionCard({ draft, onLinkClick }: Props) {
         if (!shadow) return;
 
         const handleClick: EventListener = (event) => {
-            const target = event.target as HTMLElement | null;
-            if (!target) return;
-
-            const button = target.closest<HTMLElement>(".node-link");
+            const button = (
+                event.target as HTMLElement | null
+            )?.closest<HTMLElement>(".node-link");
             if (!button) return;
 
             const descriptor = button.dataset.nodeDescriptor;
-            console.log(descriptor);
             if (!descriptor) return;
 
-            const rect = target.getBoundingClientRect();
+            const rect = button.getBoundingClientRect();
             const position = {
                 x: rect.left + window.scrollX,
                 y: rect.bottom + window.scrollY,
@@ -120,8 +168,10 @@ function DefinitionCard({ draft, onLinkClick }: Props) {
         };
 
         shadow.addEventListener("click", handleClick);
-        return () => shadow.removeEventListener("click", handleClick);
-    }, [onLinkClick]);
+        return () => {
+            shadow.removeEventListener("click", handleClick);
+        };
+    }, [draft.description, onLinkClick]);
 
     return (
         <>

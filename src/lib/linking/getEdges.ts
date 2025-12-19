@@ -33,7 +33,7 @@ export default function getEdges(
     terms: Map<string, NodeId>
 ): match[] {
     const matches: match[] = [];
-    const ids: Set<NodeId> = new Set();
+    const ids = new Set<NodeId>();
 
     for (const m of text.matchAll(NODELINK_RE)) {
         const rawKey = m[1];

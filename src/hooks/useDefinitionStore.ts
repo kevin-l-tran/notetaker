@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 import type { NodeId } from "../models/nodes";
 import type {
@@ -15,6 +15,7 @@ type TermsMap = Map<string, NodeId>;
 type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 type AddOrEditMode = { kind: "create" } | { kind: "edit"; id: NodeId };
 export type ChangeNodeError =
+    | { type: "duplicate term"; term: string }
     | { type: "label taken"; label: string }
     | { type: "aliases taken"; aliases: string[] }
     | { type: "not found"; id: string };
@@ -31,30 +32,42 @@ const generateId = () => {
 function validateNodeInput(
     input: DefinitionDraft,
     mode: AddOrEditMode,
-    definitionNodes: Record<string, DefinitionNode>
+    definitionNodes: Map<NodeId, DefinitionNode>
 ): Result<DefinitionDraft, ChangeNodeError> {
     const normalizedTitle = input.label.trim().toLowerCase();
     const normalizedAliases = input.aliases.map((a) => a.trim().toLowerCase());
 
-    const otherNodes = Object.values(definitionNodes).filter((n) =>
+    const selfTerms = new Set<string>();
+    for (const term of [normalizedTitle, ...normalizedAliases]) {
+        if (!selfTerms.has(term)) {
+            selfTerms.add(term);
+        } else {
+            return {
+                ok: false,
+                error: { type: "duplicate term", term: term },
+            };
+        }
+    }
+
+    const otherNodes = Array.from(definitionNodes.values()).filter((n) =>
         mode.kind === "edit" ? n.id !== mode.id : true
     );
 
-    const existingAliases = otherNodes.flatMap((n) =>
-        n.aliases.map((a) => a.trim().toLowerCase())
-    );
-    const existingTitles = otherNodes.map((n) => n.label.trim().toLowerCase());
-    const existingTerms = [...existingAliases, ...existingTitles];
+    const existingTerms = new Set<string>();
+    for (const node of otherNodes) {
+        existingTerms.add(node.label.trim().toLowerCase());
+        for (const alias of node.aliases) {
+            existingTerms.add(alias.trim().toLowerCase());
+        }
+    }
 
-    const titleTaken = existingTerms.includes(normalizedTitle);
-    const aliasesTaken = normalizedAliases.filter((a) =>
-        existingTerms.includes(a)
-    );
+    const labelTaken = existingTerms.has(normalizedTitle);
+    const aliasesTaken = normalizedAliases.filter((a) => existingTerms.has(a));
 
-    if (titleTaken) {
+    if (labelTaken) {
         return {
             ok: false,
-            error: { type: "label taken", label: input.label },
+            error: { type: "label taken", label: normalizedTitle },
         };
     }
     if (aliasesTaken.length > 0) {
@@ -75,17 +88,16 @@ function validateNodeInput(
 }
 
 function cleanupNodelinks(
-    definitionNodes: Record<string, DefinitionNode>,
+    definitionNodes: Map<NodeId, DefinitionNode>,
     terms: TermsMap
-): Record<string, DefinitionNode> {
-    const cleaned: Record<string, DefinitionNode> = {};
+): Map<NodeId, DefinitionNode> {
+    const cleaned = new Map<NodeId, DefinitionNode>(definitionNodes);
 
-    for (const [id, node] of Object.entries(definitionNodes)) {
+    for (const [id, node] of definitionNodes) {
         const newDescription = cleanLinks(node.description, terms);
-        cleaned[id] =
-            newDescription === node.description
-                ? node
-                : { ...node, description: newDescription };
+        if (newDescription !== node.description) {
+            cleaned.set(id, { ...node, description: newDescription });
+        }
     }
 
     return cleaned;
@@ -93,7 +105,7 @@ function cleanupNodelinks(
 
 function insertLinksIntoNode(
     node: DefinitionNode,
-    allNodes: Record<string, DefinitionNode>
+    allNodes: Map<NodeId, DefinitionNode>
 ): DefinitionNode {
     const terms = getDefinitionTerms(allNodes, node.id);
     if (terms.size === 0) return node;
@@ -116,8 +128,8 @@ function insertLinksIntoNode(
 
 function insertLinksFromNode(
     node: DefinitionNode,
-    definitionNodes: Record<string, DefinitionNode>
-): Record<string, DefinitionNode> {
+    definitionNodes: Map<NodeId, DefinitionNode>
+): Map<NodeId, DefinitionNode> {
     const terms: TermsMap = new Map();
     const id = node.id;
 
@@ -136,14 +148,13 @@ function insertLinksFromNode(
     }
 
     const ac = buildAC(terms);
-    const updated: Record<string, DefinitionNode> = {};
+    const updated = new Map<NodeId, DefinitionNode>(definitionNodes);
 
-    for (const [nodeId, n] of Object.entries(definitionNodes)) {
+    for (const [nodeId, n] of definitionNodes) {
         const newDescription = autoInsertLinks(n.id, n.description, terms, ac);
-        updated[nodeId] =
-            newDescription === n.description
-                ? n
-                : { ...n, description: newDescription };
+        if (newDescription !== n.description) {
+            updated.set(nodeId, { ...n, description: newDescription });
+        }
     }
 
     return updated;
@@ -168,8 +179,8 @@ function insertLinksFromNode(
  */
 export default function useDefinitionStore() {
     const [definitionNodes, setDefinitionNodes] = useState<
-        Record<string, DefinitionNode>
-    >({});
+        Map<NodeId, DefinitionNode>
+    >(new Map());
 
     /**
      * Global term index derived from all current nodes.
@@ -186,11 +197,12 @@ export default function useDefinitionStore() {
      * Replace the current node set with preloaded data.
      * Does not perform additional validation or linking.
      */
-    function loadDefinitionNodes(data: {
-        definitionNodes: Record<string, DefinitionNode>;
-    }) {
-        setDefinitionNodes(data.definitionNodes ?? {});
-    }
+    const loadDefinitionNodes = useCallback(
+        (nodes: Map<NodeId, DefinitionNode>) => {
+            setDefinitionNodes(new Map(nodes));
+        },
+        []
+    );
 
     /**
      * Create a new definition node.
@@ -219,14 +231,12 @@ export default function useDefinitionStore() {
 
         node = insertLinksIntoNode(node, definitionNodes);
 
-        let nextNodes: Record<string, DefinitionNode> = {
-            ...definitionNodes,
-            [node.id]: node,
-        };
-
-        nextNodes = insertLinksFromNode(node, nextNodes);
-
-        setDefinitionNodes(nextNodes);
+        setDefinitionNodes((prev) => {
+            let nextNodes = new Map<string, DefinitionNode>(prev);
+            nextNodes.set(node.id, node);
+            nextNodes = insertLinksFromNode(node, nextNodes);
+            return nextNodes;
+        });
 
         return { ok: true, value: node };
     }
@@ -247,10 +257,10 @@ export default function useDefinitionStore() {
         if (!draft.id)
             return {
                 ok: false,
-                error: { type: "not found", id: "none" },
+                error: { type: "not found", id: "" },
             };
 
-        const existing = definitionNodes[draft.id];
+        const existing = definitionNodes.get(draft.id);
         if (!existing) {
             return {
                 ok: false,
@@ -278,19 +288,16 @@ export default function useDefinitionStore() {
 
         node = insertLinksIntoNode(node, definitionNodes);
 
-        let nextNodes: Record<string, DefinitionNode> = {
-            ...definitionNodes,
-            [draft.id]: node,
-        };
+        setDefinitionNodes((prev) => {
+            let nextNodes = new Map<string, DefinitionNode>(prev);
+            nextNodes.set(node.id, node);
+            const termsAfterEdit = getDefinitionTerms(nextNodes);
+            nextNodes = cleanupNodelinks(nextNodes, termsAfterEdit);
+            nextNodes = insertLinksFromNode(node, nextNodes);
+            return nextNodes;
+        });
 
-        const termsAfterEdit = getDefinitionTerms(nextNodes);
-        nextNodes = cleanupNodelinks(nextNodes, termsAfterEdit);
-
-        nextNodes = insertLinksFromNode(node, nextNodes);
-
-        setDefinitionNodes(nextNodes);
-
-        return { ok: true, value: nextNodes[draft.id] };
+        return { ok: true, value: node };
     }
 
     /**
@@ -301,14 +308,17 @@ export default function useDefinitionStore() {
      * - `\nodelink` macros targeting this node are cleaned from descriptions.
      */
     function deleteNode(id: NodeId) {
-        if (!definitionNodes[id]) return;
+        setDefinitionNodes((prev) => {
+            if (!prev.has(id)) return prev;
 
-        const { [id]: _removed, ...rest } = definitionNodes;
+            const rest = new Map(prev);
+            rest.delete(id);
 
-        const terms = getDefinitionTerms(rest);
-        const cleanedNodes = cleanupNodelinks(rest, terms);
+            const terms = getDefinitionTerms(rest);
+            const cleanedNodes = cleanupNodelinks(rest, terms);
 
-        setDefinitionNodes(cleanedNodes);
+            return cleanedNodes;
+        });
     }
 
     return {

@@ -25,6 +25,8 @@ function LatexEditor({
 }: Props) {
     const host = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
+    const onChangeRef = useRef<Props["onChange"]>(null);
+    const initialDocRef = useRef(description);
 
     useEffect(() => {
         if (!host.current) return;
@@ -37,7 +39,7 @@ function LatexEditor({
         const updateListener = EditorView.updateListener.of((u) => {
             if (u.docChanged) {
                 const text = u.state.doc.toString();
-                onChange?.(text);
+                onChangeRef.current?.(text);
             }
         });
 
@@ -46,7 +48,7 @@ function LatexEditor({
         );
 
         const state = EditorState.create({
-            doc: "",
+            doc: initialDocRef.current,
             extensions: [
                 contentA11y,
                 minimalSetup,
@@ -71,13 +73,17 @@ function LatexEditor({
             viewRef.current = null;
             view.destroy();
         };
-    }, []);
+    }, [ariaLabelledBy]);
+
+    useEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
 
     useEffect(() => {
         const view = viewRef.current;
         if (!view) return;
         const current = view.state.doc.toString();
-        if (description !== undefined && description !== current) {
+        if (description !== current) {
             view.dispatch({
                 changes: {
                     from: 0,

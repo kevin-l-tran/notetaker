@@ -1,3 +1,4 @@
+/* eslint-disable */
 // latex.js.d.ts
 
 declare module "latex.js" {
@@ -5,7 +6,7 @@ declare module "latex.js" {
    * Options for HtmlGenerator
    * https://latex.js.org/api.html#class-htmlgenerator
    */
-  export interface HtmlGeneratorOptions {
+  export type HtmlGeneratorOptions = {
     /**
      * Default document class if a document without preamble is parsed.
      * e.g. "article"
@@ -83,7 +84,7 @@ declare module "latex.js" {
    * Options object for parse().
    * https://latex.js.org/api.html#parser
    */
-  export interface ParseOptions {
+  export type ParseOptions = {
     /**
      * HtmlGenerator instance to be used during parsing.
      */

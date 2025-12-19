@@ -75,4 +75,30 @@ describe("autoInsertLinks", () => {
 
         expect(result).toBe("spacetime");
     });
+
+    it("links only the first occurrence of the same term in a description", () => {
+        const terms = new Map<string, string>([["foo", "node-foo"]]);
+
+        const text = "foo and foo again";
+
+        const result = autoInsertLinks("current-node", text, terms);
+
+        // Only the first "foo" should be linked
+        expect(result).toBe("\\nodelink{foo}{foo} and foo again");
+    });
+
+    it("is idempotent when run on its own output", () => {
+        const terms = new Map<string, string>([
+            ["foo", "node-foo"],
+            ["bar", "node-bar"],
+        ]);
+
+        const original = "foo and bar";
+
+        const once = autoInsertLinks("current-node", original, terms);
+        const twice = autoInsertLinks("current-node", once, terms);
+
+        // No nested macros or extra changes on the second run
+        expect(twice).toBe(once);
+    });
 });

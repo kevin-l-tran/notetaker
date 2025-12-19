@@ -39,4 +39,23 @@ describe("AhoCorasick", () => {
         ).sort();
         expect(uniqueKeys).toEqual(["he", "hers", "his", "she"].sort());
     });
+
+    it("returns no matches when no patterns have been added", () => {
+        const ac = new AhoCorasick<string>();
+        ac.build();
+
+        const matches = ac.search("anything here");
+
+        expect(matches).toEqual([]);
+    });
+
+    it("returns no matches when searching an empty string", () => {
+        const ac = new AhoCorasick<string>();
+        ac.add("foo", "payload");
+        ac.build();
+
+        const matches = ac.search("");
+
+        expect(matches).toEqual([]);
+    });
 });

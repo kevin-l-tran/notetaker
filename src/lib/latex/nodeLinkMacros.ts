@@ -1,3 +1,4 @@
+/* eslint-disable */
 import type { HtmlGenerator } from "latex.js";
 
 /**
@@ -25,7 +26,7 @@ function makeNodeLinkMacros() {
      * - "k" = key/identifier argument (node descriptor).
      * - "g" = group argument (visible content).
      */
-    args["nodelink"] = ["H", "k", "g"];
+    args.nodelink = ["H", "k", "g"];
 
     /**
      * Implementation of the `\nodelink` macro.
@@ -50,12 +51,13 @@ function makeNodeLinkMacros() {
 
         // Normalize group arg into a Node/Fragment
         const contentNode =
-            contentArg && contentArg.nodeType
+            contentArg?.nodeType
                 ? contentArg
                 : this.g.createFragment(contentArg);
 
         // <button class="def-link" data-definition-id="...">…</button>
         const button = this.g.create("button", contentNode, "node-link");
+        button.setAttribute("type", "button");
         if (descriptor) {
             button.setAttribute("data-node-descriptor", descriptor);
         }

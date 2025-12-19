@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ChangeNodeError } from "../../hooks/useDefinitionStore";
 import type {
@@ -39,42 +39,44 @@ function DefinitionEditorForm({
     const overlayRef = useRef<HTMLDivElement | null>(null);
     const modalRef = useRef<HTMLDivElement | null>(null);
 
-    const [label, setLabel] = useState<string>("New Definition");
-    const [aliases, setAliases] = useState<string[]>([""]);
-    const [description, setDescription] = useState<string>(DEFAULT_DESCRIPTION);
+    const [label, setLabel] = useState<string>(() => {
+        if (mode === "edit" && initialDraft) return initialDraft.label;
+        return "New Definition";
+    });
+
+    const [aliases, setAliases] = useState<string[]>(() => {
+        if (mode === "edit" && initialDraft) {
+            return initialDraft.aliases.length > 0
+                ? initialDraft.aliases
+                : [""];
+        }
+        return [""];
+    });
+
+    const [description, setDescription] = useState<string>(() => {
+        if (mode === "edit" && initialDraft) return initialDraft.description;
+        return DEFAULT_DESCRIPTION;
+    });
 
     const trimmedLabel = label.trim();
     const trimmedAliases = aliases
         .map((a) => a.trim())
         .filter((a) => a.length > 0);
 
-    const makeDraftNode = (): DefinitionDraft => ({
+    const draftNode = {
+        id: mode === "edit" ? initialDraft?.id : undefined,
         label: trimmedLabel,
         aliases: trimmedAliases,
         description,
-    });
+    };
 
     const [labelError, setLabelError] = useState<string | null>(null);
     const [aliasErrors, setAliasErrors] = useState<Map<string, string>>(
         new Map()
     );
 
-    const [islabelFormCollapsed, setIslabelFormCollapsed] = useState(false);
+    const [islabelFormCollapsed, setIsLabelFormCollapsed] = useState(false);
     const [splitPercent, setSplitPercent] = useState<number>(50);
-
-    useEffect(() => {
-        if (!open) return;
-
-        if (mode === "edit" && initialDraft) {
-            setLabel(initialDraft.label);
-            setAliases(
-                initialDraft.aliases.length > 0 ? initialDraft.aliases : [""]
-            );
-            setDescription(initialDraft.description);
-            setLabelError(null);
-            setAliasErrors(new Map());
-        }
-    }, [open, mode, initialDraft]);
 
     const handleSubmit = () => {
         setLabelError(null);
@@ -108,7 +110,6 @@ function DefinitionEditorForm({
         );
         if (!ok) return;
 
-        const draftNode = makeDraftNode();
         const result = onSubmit(draftNode);
 
         if (result.ok) {
@@ -147,7 +148,9 @@ function DefinitionEditorForm({
             if (e.key === "Escape") onClose();
         };
         window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
+        return () => {
+            window.removeEventListener("keydown", onKey);
+        };
     }, [open, onClose]);
 
     const handleBackdrop = (e: React.MouseEvent) => {
@@ -179,21 +182,22 @@ function DefinitionEditorForm({
         draggingRef.current = true;
         document.body.style.cursor = "col-resize";
     };
-    const onMouseMove = (e: MouseEvent) => {
+    const onMouseMove = useCallback((e: MouseEvent) => {
         if (!draggingRef.current || !modalRef.current) return;
         const rect = modalRef.current.getBoundingClientRect();
         const x = Math.max(
             rect.left + 150,
             Math.min(e.clientX, rect.right - 150)
-        ); // bounds
+        );
         const pct = ((x - rect.left) / rect.width) * 100;
         setSplitPercent(Math.max(20, Math.min(80, pct)));
-    };
-    const onMouseUp = () => {
+    }, []);
+
+    const onMouseUp = useCallback(() => {
         if (!draggingRef.current) return;
         draggingRef.current = false;
         document.body.style.cursor = "";
-    };
+    }, []);
 
     useEffect(() => {
         window.addEventListener("mousemove", onMouseMove);
@@ -201,6 +205,8 @@ function DefinitionEditorForm({
         return () => {
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
+            draggingRef.current = false;
+            document.body.style.cursor = "";
         };
     }, [onMouseMove, onMouseUp]);
 
@@ -227,7 +233,7 @@ function DefinitionEditorForm({
         document.body.style.cursor = "nwse-resize";
     };
 
-    const onResizeMove = (e: MouseEvent) => {
+    const onResizeMove = useCallback((e: MouseEvent) => {
         if (!resizingRef.current || !sizeRef.current || !startRef.current)
             return;
         const dx = e.clientX - startRef.current.x;
@@ -241,13 +247,13 @@ function DefinitionEditorForm({
             Math.max(480, sizeRef.current.h + 2 * dy)
         );
         setModalSize({ w, h });
-    };
+    }, []);
 
-    const onResizeEnd = () => {
+    const onResizeEnd = useCallback(() => {
         if (!resizingRef.current) return;
         resizingRef.current = false;
         document.body.style.cursor = "";
-    };
+    }, []);
 
     useEffect(() => {
         window.addEventListener("mousemove", onResizeMove);
@@ -255,6 +261,8 @@ function DefinitionEditorForm({
         return () => {
             window.removeEventListener("mousemove", onResizeMove);
             window.removeEventListener("mouseup", onResizeEnd);
+            resizingRef.current = false;
+            document.body.style.cursor = "";
         };
     }, [onResizeMove, onResizeEnd]);
 
@@ -273,7 +281,9 @@ function DefinitionEditorForm({
                 aria-labelledby="definition-editor-title"
                 className="editor-modal"
                 style={{ width: modalSize.w, height: modalSize.h }}
-                onMouseDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => {
+                    e.stopPropagation();
+                }}
             >
                 {/* Header */}
                 <div className="editor-modal-header">
@@ -295,174 +305,183 @@ function DefinitionEditorForm({
                 </div>
 
                 {/* Content */}
-                <form className="editor-modal-content">
-                    {/* Left panel */}
-                    <div
-                        className="editor-left-panel"
-                        style={{ width: `${splitPercent}%` }}
-                    >
-                        {/* Collapsible header */}
+                <form
+                    className="editor-modal-form"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSubmit();
+                    }}
+                >
+                    <div className="editor-modal-content">
+                        {/* Left panel */}
                         <div
-                            className="editor-form-toggle"
-                            onClick={() => setIslabelFormCollapsed((v) => !v)}
+                            className="editor-left-panel"
+                            style={{ width: `${splitPercent}%` }}
                         >
-                            <span
-                                className="editor-form-arrow"
-                                style={{
-                                    transform: islabelFormCollapsed
-                                        ? "rotate(-90deg)"
-                                        : "rotate(0deg)",
+                            {/* Collapsible header */}
+                            <div
+                                className="editor-form-toggle"
+                                onClick={() => {
+                                    setIsLabelFormCollapsed((v) => !v);
                                 }}
                             >
-                                ▾
-                            </span>
+                                <span
+                                    className="editor-form-arrow"
+                                    style={{
+                                        transform: islabelFormCollapsed
+                                            ? "rotate(-90deg)"
+                                            : "rotate(0deg)",
+                                    }}
+                                >
+                                    ▾
+                                </span>
+                            </div>
+
+                            {/* Collapsible form body */}
+                            {!islabelFormCollapsed && (
+                                <div className="editor-form-body">
+                                    <div className="editor-form-group">
+                                        <label
+                                            className="editor-label"
+                                            htmlFor="definition-label-input"
+                                        >
+                                            Label
+                                        </label>
+                                        <input
+                                            id="definition-label-input"
+                                            value={label}
+                                            onChange={(e) => {
+                                                setLabel(e.target.value);
+                                            }}
+                                            className="editor-input"
+                                        />
+                                        {labelError && (
+                                            <div className="editor-error">
+                                                {labelError}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <fieldset className="editor-aliases">
+                                            <legend className="editor-label">
+                                                Aliases
+                                            </legend>
+                                            {aliases.map((alias, index) => {
+                                                const normalized = alias
+                                                    .trim()
+                                                    .toLowerCase();
+                                                const error = normalized
+                                                    ? aliasErrors.get(
+                                                          normalized
+                                                      )
+                                                    : null;
+
+                                                return (
+                                                    <div key={index}>
+                                                        <div className="editor-alias-row">
+                                                            <input
+                                                                value={alias}
+                                                                onChange={(
+                                                                    e
+                                                                ) => {
+                                                                    handleAliasChange(
+                                                                        index,
+                                                                        e.target
+                                                                            .value
+                                                                    );
+                                                                }}
+                                                                placeholder={`Alias ${
+                                                                    index + 1
+                                                                }`}
+                                                                className="editor-input"
+                                                                aria-label={`Alias ${
+                                                                    index + 1
+                                                                }`}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    removeAliasField(
+                                                                        index
+                                                                    );
+                                                                }}
+                                                                className="editor-alias-remove"
+                                                                aria-label={`Remove alias ${
+                                                                    index + 1
+                                                                }`}
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                        {error && (
+                                                            <div className="editor-error">
+                                                                {error}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                            <button
+                                                type="button"
+                                                onClick={addAliasField}
+                                                className="editor-alias-add"
+                                            >
+                                                + Add alias
+                                            </button>
+                                        </fieldset>
+                                    </div>
+                                </div>
+                            )}
+
+                            <label
+                                id="definition-description-label"
+                                className="editor-label editor-label--sr-only"
+                            >
+                                Description
+                            </label>
+                            <LatexEditor
+                                description={description}
+                                onChange={setDescription}
+                                ariaLabelledBy="definition-description-label"
+                            />
                         </div>
 
-                        {/* Collapsible form body */}
-                        {!islabelFormCollapsed && (
-                            <div className="editor-form-body">
-                                <div className="editor-form-group">
-                                    <label
-                                        className="editor-label"
-                                        htmlFor="definition-label-input"
-                                    >
-                                        Label
-                                    </label>
-                                    <input
-                                        id="definition-label-input"
-                                        value={label}
-                                        onChange={(e) =>
-                                            setLabel(e.target.value)
-                                        }
-                                        className="editor-input"
-                                    />
-                                    {labelError && (
-                                        <div className="editor-error">
-                                            {labelError}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <fieldset className="editor-aliases">
-                                        <legend className="editor-label">
-                                            Aliases
-                                        </legend>
-                                        {aliases.map((alias, index) => {
-                                            const normalized = alias
-                                                .trim()
-                                                .toLowerCase();
-                                            const error = normalized
-                                                ? aliasErrors.get(normalized)
-                                                : null;
-
-                                            return (
-                                                <div key={index}>
-                                                    <div className="editor-alias-row">
-                                                        <input
-                                                            value={alias}
-                                                            onChange={(e) =>
-                                                                handleAliasChange(
-                                                                    index,
-                                                                    e.target
-                                                                        .value
-                                                                )
-                                                            }
-                                                            placeholder={`Alias ${
-                                                                index + 1
-                                                            }`}
-                                                            className="editor-input"
-                                                            aria-label={`Alias ${
-                                                                index + 1
-                                                            }`}
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                removeAliasField(
-                                                                    index
-                                                                )
-                                                            }
-                                                            className="editor-alias-remove"
-                                                            aria-label={`Remove alias ${
-                                                                index + 1
-                                                            }`}
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </div>
-                                                    {error && (
-                                                        <div className="editor-error">
-                                                            {error}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                        <button
-                                            type="button"
-                                            onClick={addAliasField}
-                                            className="editor-alias-add"
-                                        >
-                                            + Add alias
-                                        </button>
-                                    </fieldset>
-                                </div>
-                            </div>
-                        )}
-
-                        <label
-                            id="definition-description-label"
-                            className="editor-label editor-label--sr-only"
-                        >
-                            Description
-                        </label>
-                        <LatexEditor
-                            description={description}
-                            onChange={setDescription}
-                            ariaLabelledBy="definition-description-label"
+                        {/* Divider */}
+                        <div
+                            className="editor-splitter"
+                            onMouseDown={onMouseDown}
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label="Resize panels"
                         />
+
+                        {/* Right panel */}
+                        <div className="editor-right-panel">
+                            <div className="editor-preview-card">
+                                <DefinitionCard draft={draftNode} />
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Divider */}
-                    <div
-                        className="editor-splitter"
-                        onMouseDown={onMouseDown}
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label="Resize panels"
-                    />
-
-                    {/* Right panel */}
-                    <div className="editor-right-panel">
-                        <div className="editor-preview-card">
-                            <DefinitionCard draft={makeDraftNode()} />
-                        </div>
+                    {/* Footer */}
+                    <div className="editor-modal-footer">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setDescription(autoLinkGenerate(draftNode));
+                            }}
+                            className="editor-secondary-button"
+                        >
+                            Generate Links
+                        </button>
+                        <button type="submit" className="editor-primary-button">
+                            {mode === "create"
+                                ? "Save Definition"
+                                : "Update Definition"}
+                        </button>
                     </div>
                 </form>
-
-                {/* Footer */}
-                <div className="editor-modal-footer">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            const newNode = makeDraftNode();
-                            setDescription(autoLinkGenerate(newNode));
-                        }}
-                        className="editor-secondary-button"
-                    >
-                        Generate Links
-                    </button>
-                    <button
-                        type="submit"
-                        onClick={handleSubmit}
-                        className="editor-primary-button"
-                    >
-                        {mode === "create"
-                            ? "Save Definition"
-                            : "Update Definition"}
-                    </button>
-                </div>
 
                 {/* Resize handle */}
                 <div

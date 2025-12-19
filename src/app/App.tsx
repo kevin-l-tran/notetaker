@@ -9,7 +9,7 @@ import buildAC from "../lib/linking/buildAC";
 import useDefinitionStore from "../hooks/useDefinitionStore";
 import useDefinitionWindows from "../hooks/useDefinitionWindows";
 import useDefinitionGraph from "../hooks/useDefinitionGraph";
-import DefinitionWindows from "../components/DefinitionWindowManager";
+import DefinitionWindows from "../components/DefinitionWindows";
 import DefinitionEditorForm from "../components/DefinitionEditorForm";
 import GraphView from "../components/GraphView";
 import GraphToolbar from "../components/GraphToolbar";
@@ -34,7 +34,8 @@ export default function App() {
     } = useDefinitionStore();
     const { definitionGraphNodes, definitionGraphEdges } =
         useDefinitionGraph(definitionNodes);
-    const { windows, setWindows, openWindowForNode } = useDefinitionWindows();
+    const { windows, zOrder, openWindowForNode, closeWindow, focusWindow } =
+        useDefinitionWindows();
 
     const definitionTerms = getDefinitionTerms(definitionNodes);
     const definitionAC = buildAC(definitionTerms);
@@ -42,7 +43,9 @@ export default function App() {
     const [contextMenu, setContextMenu] = useState<NodeContextMenuState>(null);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingNodeId, setEditingNodeId] = useState<NodeId | null>(null);
-    const editingNode = editingNodeId ? definitionNodes[editingNodeId] : null;
+    const editingNode = editingNodeId
+        ? definitionNodes.get(editingNodeId) ?? null
+        : null;
 
     const [searchTerm, setSearchTerm] = useState("");
     const [focusedNodeId, setFocusedNodeId] = useState<NodeId | null>(null);
@@ -52,7 +55,7 @@ export default function App() {
         descriptor: string,
         position?: { x: number; y: number }
     ) => {
-        const matches = Object.values(definitionNodes).filter((n) => {
+        const matches = Array.from(definitionNodes.values()).filter((n) => {
             const normalizedTerms = [
                 ...n.aliases.map((a) => a.trim().toLowerCase()),
                 n.label.trim().toLowerCase(),
@@ -60,7 +63,7 @@ export default function App() {
             return normalizedTerms.includes(descriptor.trim().toLowerCase());
         });
         if (matches.length > 0) {
-            openWindowForNode(matches[0], position);
+            openWindowForNode(matches[0].id, position);
         }
     };
 
@@ -83,21 +86,16 @@ export default function App() {
         const data = exampleData as {
             definitionNodes: Record<string, DefinitionNode>;
         };
+        const nodes = new Map<string, DefinitionNode>(
+            Object.entries(data.definitionNodes)
+        );
 
-        loadDefinitionNodes({ definitionNodes: data.definitionNodes ?? {} });
+        loadDefinitionNodes(nodes);
     };
 
-    const handleLoadFromJson = (json: unknown) => {
-        if (!json || typeof json !== "object") {
-            console.error("Invalid graph file format");
-            return;
-        }
-        const parsed = json as {
-            definitionNodes?: Record<string, DefinitionNode>;
-        };
-        loadDefinitionNodes({
-            definitionNodes: parsed.definitionNodes ?? {},
-        });
+    const handleLoadFromJson = (json: Record<string, DefinitionNode>) => {
+        const nodes = new Map<string, DefinitionNode>(Object.entries(json));
+        loadDefinitionNodes(nodes);
     };
 
     const handleSearch = () => {
@@ -108,7 +106,7 @@ export default function App() {
             return;
         }
 
-        const match = Object.values(definitionNodes).find((n) => {
+        const match = Array.from(definitionNodes.values()).find((n) => {
             const title = n.label.trim().toLowerCase();
             if (title === q) return true;
 
@@ -125,9 +123,13 @@ export default function App() {
     };
 
     useEffect(() => {
-        const handleClick = () => setContextMenu(null);
+        const handleClick = () => {
+            setContextMenu(null);
+        };
         window.addEventListener("click", handleClick);
-        return () => window.removeEventListener("click", handleClick);
+        return () => {
+            window.removeEventListener("click", handleClick);
+        };
     }, []);
 
     return (
@@ -150,9 +152,10 @@ export default function App() {
                     edges={definitionGraphEdges}
                     centerNodeId={focusedNodeId}
                     highlightNodeId={focusedNodeId}
-                    onNodeDoubleTap={(id) =>
-                        openWindowForNode(definitionNodes[id])
-                    }
+                    onNodeDoubleTap={(id) => {
+                        const node = definitionNodes.get(id);
+                        if (node) openWindowForNode(node.id);
+                    }}
                     onNodeContextMenu={({ id, clientX, clientY }) => {
                         setContextMenu({ nodeId: id, clientX, clientY });
                     }}
@@ -163,7 +166,9 @@ export default function App() {
                 onSave={handleSaveToFile}
                 onLoadExample={handleLoadExample}
                 onLoadJson={handleLoadFromJson}
-                onOpenCreate={() => setIsCreateOpen(true)}
+                onOpenCreate={() => {
+                    setIsCreateOpen(true);
+                }}
                 searchTerm={searchTerm}
                 onSearchTermChange={(value) => {
                     setSearchTerm(value);
@@ -191,15 +196,19 @@ export default function App() {
 
             <DefinitionWindows
                 windows={windows}
+                zOrder={zOrder}
                 nodes={definitionNodes}
-                onChangeWindows={(updater) => setWindows(updater)}
+                onFocusWindow={focusWindow}
+                onCloseWindow={closeWindow}
                 onLinkClick={onLinkClick}
             />
 
             <DefinitionEditorForm
                 open={isCreateOpen}
                 mode="create"
-                onClose={() => setIsCreateOpen(false)}
+                onClose={() => {
+                    setIsCreateOpen(false);
+                }}
                 onSubmit={addNode}
                 autoLinkGenerate={(draft) =>
                     autoInsertLinks(
@@ -212,6 +221,7 @@ export default function App() {
             />
             {editingNode && (
                 <DefinitionEditorForm
+                    key={`edit-${editingNode.label}`}
                     open={Boolean(editingNode)}
                     mode="edit"
                     initialDraft={{
@@ -219,7 +229,9 @@ export default function App() {
                         aliases: editingNode.aliases,
                         description: editingNode.description,
                     }}
-                    onClose={() => setEditingNodeId(null)}
+                    onClose={() => {
+                        setEditingNodeId(null);
+                    }}
                     onSubmit={(draft) =>
                         editNode({
                             id: editingNode.id,

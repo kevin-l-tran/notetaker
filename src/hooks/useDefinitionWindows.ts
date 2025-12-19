@@ -1,13 +1,7 @@
 import { useState } from "react";
 
-import type { Node, NodeId } from "../models/nodes";
-
-type WindowEntry = {
-    id: string;
-    nodeId: NodeId;
-    initialPosition: { x: number; y: number };
-    initialSize: { w: number; h: number };
-};
+import type { NodeId } from "../models/nodes";
+import type { WindowEntry } from "../components/DefinitionWindows";
 
 const generateId = () => {
     if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -19,53 +13,54 @@ const generateId = () => {
 };
 
 const createWindowEntry = (
+    id: string = generateId(),
     nodeId: NodeId,
     index: number,
     position?: { x: number; y: number }
 ): WindowEntry => ({
-    id: generateId(),
+    id,
     nodeId,
-    initialPosition: position ?? {
+    defaultPosition: position ?? {
         x: 100 + index * 30,
         y: 80 + index * 30,
     },
-    initialSize: { w: 400, h: 300 },
+    defaultSize: { w: 400, h: 300 },
 });
 
-/**
- * Manage the set of open definition windows.
- *
- * Responsibilities:
- * - Track all open windows and their associated node ids.
- * - Provide an API to open a new window for a node, optionally at a
- *   specific screen position.
- * - Provide an API to close a window by its window id.
- *
- * The actual window position/size updates at runtime are expected to be
- * managed by the window component itself, which can call `setWindows`
- * to persist changes if needed.
- */
 export default function useDefinitionWindows() {
     const [windows, setWindows] = useState<WindowEntry[]>([]);
+    const [zOrder, setZOrder] = useState<string[]>([]);
 
     const openWindowForNode = (
-        node: Node,
+        id: NodeId,
         position?: { x: number; y: number }
     ) => {
+        const windowId = generateId();
         setWindows((prev) => [
             ...prev,
-            createWindowEntry(node.id, prev.length, position),
+            createWindowEntry(windowId, id, prev.length, position),
         ]);
+        setZOrder((prev) => [...prev, windowId]);
     };
 
     const closeWindow = (id: string) => {
         setWindows((prev) => prev.filter((w) => w.id !== id));
+        setZOrder((prev) => prev.filter((zid) => zid !== id));
+    };
+
+    const focusWindow = (id: string) => {
+        setZOrder((prev) => {
+            if (!prev.includes(id)) return [...prev, id];
+            const rest = prev.filter((zid) => zid !== id);
+            return [...rest, id];
+        });
     };
 
     return {
         windows,
-        setWindows,
+        zOrder,
         openWindowForNode,
         closeWindow,
+        focusWindow,
     };
 }

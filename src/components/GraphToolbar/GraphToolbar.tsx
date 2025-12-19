@@ -1,9 +1,11 @@
 import { useRef } from "react";
 
+import type { DefinitionNode } from "../../models/definitionNodes";
+
 type GraphToolbarProps = {
     onSave: () => void;
     onLoadExample: () => void;
-    onLoadJson: (json: unknown) => void;
+    onLoadJson: (json: Record<string, DefinitionNode>) => void;
     onOpenCreate: () => void;
     searchTerm: string;
     onSearchTermChange: (value: string) => void;
@@ -30,7 +32,8 @@ function GraphToolbar({
     const handleFileChange: React.ChangeEventHandler<HTMLInputElement> = (
         event
     ) => {
-        const file = event.target.files?.[0];
+        const input = event.target;
+        const file = input.files?.[0];
         if (!file) return;
 
         const reader = new FileReader();
@@ -38,12 +41,15 @@ function GraphToolbar({
             const text = e.target?.result;
             if (typeof text !== "string") return;
             try {
-                const parsed = JSON.parse(text);
+                const parsed = JSON.parse(text) as Record<
+                    string,
+                    DefinitionNode
+                >;
                 onLoadJson(parsed);
             } catch (err) {
                 console.error("Failed to parse graph JSON", err);
             } finally {
-                if (event.target) event.target.value = "";
+                input.value = "";
             }
         };
         reader.readAsText(file);
@@ -71,7 +77,7 @@ function GraphToolbar({
             <input
                 ref={fileInputRef}
                 type="file"
-                accept="application/json"
+                accept=".json,application/json"
                 style={{ display: "none" }}
                 onChange={handleFileChange}
             />
@@ -87,7 +93,7 @@ function GraphToolbar({
                 style={{
                     flexGrow: 0.5,
                     marginRight: 8,
-                    border: "1px",
+                    border: "1px solid transparent",
                     borderRadius: "10px",
                     padding: "10px",
                     paddingLeft: "20px",
@@ -95,7 +101,9 @@ function GraphToolbar({
                 }}
                 placeholder="Search title or alias..."
                 value={searchTerm}
-                onChange={(e) => onSearchTermChange(e.target.value)}
+                onChange={(e) => {
+                    onSearchTermChange(e.target.value);
+                }}
                 onKeyDown={(e) => {
                     if (e.key === "Enter") onSearch();
                 }}

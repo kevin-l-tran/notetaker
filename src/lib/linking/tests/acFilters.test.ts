@@ -55,4 +55,18 @@ describe("hasWordBoundaries", () => {
         // "space" from index 1 to 6 should be rejected because it is inside braces
         expect(hasWordBoundaries(text, 1, 6)).toBe(false);
     });
+
+    it("treats hyphen as a word boundary", () => {
+        const text = "space-time";
+        // "space" at the beginning should be considered a full word
+        expect(hasWordBoundaries(text, 0, 5)).toBe(true);
+        // "time" at the end should be considered a full word
+        expect(hasWordBoundaries(text, 6, 10)).toBe(true);
+    });
+
+    it("treats digits as part of the same word", () => {
+        const text = "space2";
+        // The trailing "2" should make this a partial word match
+        expect(hasWordBoundaries(text, 0, 5)).toBe(false);
+    });
 });

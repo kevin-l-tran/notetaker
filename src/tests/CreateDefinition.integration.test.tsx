@@ -1,25 +1,46 @@
 import { useEffect, useState } from "react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+    type MockInstance,
+    describe,
+    it,
+    expect,
+    vi,
+    beforeEach,
+    afterEach,
+} from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import type {
+    DefinitionDraft,
+    DefinitionNode,
+} from "../models/definitionNodes";
 import useDefinitionStore from "../hooks/useDefinitionStore";
 import DefinitionEditorForm from "../components/DefinitionEditorForm";
 
 // --- Lightweight mocks for child components -------------------------------
 
 vi.mock("../components/LatexEditor", () => ({
-    default: ({ description, onChange }: any) => (
+    default: ({
+        description,
+        onChange,
+    }: {
+        description: string;
+        onChange: (value: string) => void;
+        ariaLabelledBy?: string;
+    }) => (
         <textarea
             aria-label="Description"
             value={description}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+                onChange(e.target.value);
+            }}
         />
     ),
 }));
 
 vi.mock("../components/DefinitionCard", () => ({
-    default: ({ draft }: any) => (
+    default: ({ draft }: { draft: DefinitionDraft }) => (
         <div data-testid="definition-preview">
             <h2>{draft.label}</h2>
         </div>
@@ -28,17 +49,19 @@ vi.mock("../components/DefinitionCard", () => ({
 
 // --- Initial node data used by the test -----------------------------------
 
-const INITIAL_NODES = {
-    topology: {
-        id: "topology",
-        label: "Topology",
-        aliases: [] as string[],
-        description:
-            "A topology can be defined using a \\nodelink{metric space}{metric space}.",
-        createdAt: "",
-        updatedAt: "",
-    },
-} as const;
+const INITIAL_NODES = new Map<string, DefinitionNode>(
+    Object.entries({
+        topology: {
+            id: "topology",
+            label: "Topology",
+            aliases: [] as string[],
+            description:
+                "A topology can be defined using a \\nodelink{metric space}{metric space}.",
+            createdAt: "",
+            updatedAt: "",
+        },
+    })
+);
 
 // --- Test harness that wires the form to the real store -------------------
 
@@ -48,17 +71,19 @@ function TestCreateDefinitionFlow() {
     const [open, setOpen] = useState(true);
 
     useEffect(() => {
-        loadDefinitionNodes({ definitionNodes: INITIAL_NODES as any });
-    }, []);
+        loadDefinitionNodes(INITIAL_NODES);
+    }, [loadDefinitionNodes]);
 
-    const nodes = Object.values(definitionNodes);
+    const nodes = Array.from(definitionNodes.values());
 
     return (
         <div>
             <DefinitionEditorForm
                 open={open}
                 mode="create"
-                onClose={() => setOpen(false)}
+                onClose={() => {
+                    setOpen(false);
+                }}
                 onSubmit={addNode}
                 // keep auto-linking trivial for this test
                 autoLinkGenerate={(draft) => draft.description}
@@ -85,11 +110,10 @@ function TestCreateDefinitionFlow() {
 
 // --- The actual integration test -----------------------------------------
 
-let confirmSpy: any;
+let confirmSpy: MockInstance<typeof window.confirm>;
 
 describe("Create + save definition flow", () => {
     beforeEach(() => {
-        // DefinitionEditorForm asks for confirmation before calling onSubmit
         confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     });
 

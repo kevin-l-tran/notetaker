@@ -21,11 +21,11 @@ export class AhoCorasick<T> {
      *
      * State 0 is the root.
      */
-    private fsm: Array<{
+    private fsm: {
         next: Map<string, number>;
         fail: number;
-        out: Array<{ key: string; payload: T }>;
-    }> = [{ next: new Map(), fail: 0, out: [] }];
+        out: { key: string; payload: T }[];
+    }[] = [{ next: new Map(), fail: 0, out: [] }];
 
     /**
      * Insert a pattern key into the trie, associating it with a payload.
@@ -36,8 +36,7 @@ export class AhoCorasick<T> {
     add(key: string, payload: T) {
         const word = key.toLowerCase();
         let v = 0;
-        for (let i = 0; i < word.length; i++) {
-            const ch = word[i];
+        for (const ch of word) {
             let to = this.fsm[v].next.get(ch);
             if (to === undefined) {
                 to = this.fsm.length;
@@ -66,15 +65,17 @@ export class AhoCorasick<T> {
             this.fsm[to].fail = 0;
             q.push(to);
         }
-        while (q.length) {
-            const v = q.shift()!;
+
+        let head = 0;
+        while (head < q.length) {
+            const v = q[head++];
             for (const [ch, u] of this.fsm[v].next) {
                 let f = this.fsm[v].fail;
                 while (f && !this.fsm[f].next.has(ch)) f = this.fsm[f].fail;
                 const ff = this.fsm[f].next.get(ch) ?? 0;
                 this.fsm[u].fail = ff;
                 if (this.fsm[ff].out.length) {
-                    this.fsm[u].out = this.fsm[u].out.concat(this.fsm[ff].out);
+                    this.fsm[u].out.push(...this.fsm[ff].out);
                 }
                 q.push(u);
             }

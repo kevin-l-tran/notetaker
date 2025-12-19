@@ -2,30 +2,33 @@ import { useEffect, useState } from "react";
 import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
+import type { DefinitionNode } from "../models/definitionNodes";
 import useDefinitionStore from "../hooks/useDefinitionStore";
 import GraphContextMenu from "../components/GraphContextMenu";
 
 // --- Initial node data used by the test -----------------------------------
 
-const INITIAL_NODES = {
-    metric: {
-        id: "metric",
-        label: "Metric space",
-        aliases: [] as string[],
-        description: "A metric space is usually denoted (X, d).",
-        createdAt: "",
-        updatedAt: "",
-    },
-    topology: {
-        id: "topology",
-        label: "Topology",
-        aliases: [] as string[],
-        description:
-            "A topology can be defined using a \\nodelink{metric space}{metric space}.",
-        createdAt: "",
-        updatedAt: "",
-    },
-} as const;
+const INITIAL_NODES = new Map<string, DefinitionNode>(
+    Object.entries({
+        metric: {
+            id: "metric",
+            label: "Metric space",
+            aliases: [] as string[],
+            description: "A metric space is usually denoted (X, d).",
+            createdAt: "",
+            updatedAt: "",
+        },
+        topology: {
+            id: "topology",
+            label: "Topology",
+            aliases: [] as string[],
+            description:
+                "A topology can be defined using a \\nodelink{metric space}{metric space}.",
+            createdAt: "",
+            updatedAt: "",
+        },
+    })
+);
 
 // --- Harness: store + tiny graph + windows + context menu -----------------
 
@@ -43,16 +46,16 @@ function DeleteDefinitionHarness() {
 
     // Preload our two nodes into the real store
     useEffect(() => {
-        loadDefinitionNodes({ definitionNodes: INITIAL_NODES as any });
-    }, []);
+        loadDefinitionNodes(INITIAL_NODES);
+    }, [loadDefinitionNodes]);
 
-    const nodesArray = Object.values(definitionNodes);
+    const nodes = Array.from(definitionNodes.values());
 
     return (
         <div>
             {/* Minimal “graph”: each node is represented as a button */}
             <div aria-label="mock-graph">
-                {nodesArray.map((node) => (
+                {nodes.map((node) => (
                     <button
                         key={node.id}
                         type="button"
@@ -73,7 +76,7 @@ function DeleteDefinitionHarness() {
 
             {/* Expose descriptions so the test can assert on link cleanup */}
             <div aria-label="descriptions">
-                {nodesArray.map((node) => (
+                {nodes.map((node) => (
                     <pre key={node.id} aria-label={`${node.id}-description`}>
                         {node.description}
                     </pre>
@@ -83,7 +86,9 @@ function DeleteDefinitionHarness() {
             {/* Real context menu wired to our handlers */}
             <GraphContextMenu
                 state={contextMenu}
-                onEdit={() => {}}
+                onEdit={() => {
+                    /* empty */
+                }}
                 onDelete={(id) => {
                     deleteNode(id);
                     setContextMenu(null);
@@ -96,7 +101,7 @@ function DeleteDefinitionHarness() {
 // --- The test -------------------------------------------------------------
 
 describe("delete existing node + link cleanup", () => {
-    it("cleans links in existing nodes and removes the deleted node", async () => {
+    it("cleans links in existing nodes and removes the deleted node", () => {
         render(<DeleteDefinitionHarness />);
 
         // Sanity check: both nodes are present in the mock graph
@@ -119,7 +124,7 @@ describe("delete existing node + link cleanup", () => {
 
         // Open the context menu on Metric space and click Delete
         fireEvent.contextMenu(metricButton, { clientX: 100, clientY: 100 });
-        const deleteButton = screen.getByRole("button", { name: /delete/i });
+        const deleteButton = screen.getByRole("menuitem", { name: /delete/i });
         fireEvent.click(deleteButton);
 
         // The Metric space node is gone from the “graph”

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape from "cytoscape";
 import fcose from "cytoscape-fcose";
@@ -29,6 +29,7 @@ function GraphView({
     onNodeContextMenu,
 }: Props) {
     const cyRef = useRef<cytoscape.Core | null>(null);
+    const [cyReady, setCyReady] = useState<boolean>(false);
 
     const elements = useMemo(
         () => [
@@ -40,18 +41,16 @@ function GraphView({
         [nodes, edges]
     );
 
-    useCytoscapeEvents(cyRef, { onNodeDoubleTap, onNodeContextMenu });
+    const handlers = useMemo(
+        () => ({ onNodeDoubleTap, onNodeContextMenu }),
+        [onNodeDoubleTap, onNodeContextMenu]
+    );
+    useCytoscapeEvents(cyRef, cyReady, handlers);
 
-    useEffect(() => {
-        if (!cyRef.current) return;
-        const cy = cyRef.current;
-
-        const outDegrees: number[] = [];
-        cy.nodes().forEach((node) => {
-            const out = cy.edges(`[source = "${node.id()}"]`).length;
-            node.data("outDegree", out);
-            outDegrees.push(out);
-        });
+    const setupGraph = (cy: cytoscape.Core | null) => {
+        if (!cy) return;
+        cyRef.current = cy;
+        setCyReady(true);
 
         cy.style()
             .fromJson([
@@ -96,7 +95,19 @@ function GraphView({
                 },
             ])
             .update();
+    };
 
+    useEffect(() => {
+        const cy = cyRef.current;
+        if (!cy) return;
+
+        // recompute out-degree
+        cy.nodes().forEach((node) => {
+            const out = node.outgoers("edge").length;
+            node.data("outDegree", out);
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         cy.layout({
             name: "fcose",
             nodeDimensionsIncludeLabels: true,
@@ -107,6 +118,7 @@ function GraphView({
             padding: 80,
             gravity: 0.1,
             fit: true,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any).run();
     }, [nodes, edges]);
 
@@ -115,7 +127,7 @@ function GraphView({
         const cy = cyRef.current;
 
         const node = cy.getElementById(centerNodeId);
-        if (!node || node.length === 0) return;
+        if (!node.length || node.length === 0) return;
 
         cy.animate(
             {
@@ -136,7 +148,7 @@ function GraphView({
         if (!highlightNodeId) return;
 
         const node = cy.getElementById(highlightNodeId);
-        if (!node || node.length === 0) return;
+        if (!node.length || node.length === 0) return;
 
         node.addClass("search-highlight");
     }, [highlightNodeId]);
@@ -144,14 +156,13 @@ function GraphView({
     return (
         <CytoscapeComponent
             elements={elements}
-            cy={(cy: cytoscape.Core | null) => (cyRef.current = cy)}
+            cy={setupGraph}
             style={{ width: "100%", height: "100%" }}
             minZoom={0.1}
             maxZoom={2}
             pixelRatio={1}
             motionBlur
             motionBlurOpacity={0.15}
-            wheelSensitivity={1}
         />
     );
 }

@@ -14,7 +14,7 @@ import { getDefinitionTerms } from "../lib/linking/getTerms";
  * - Uses `useMemo` so recomputation only happens when `definitionNodes` change.
  */
 export default function useDefinitionGraph(
-    definitionNodes: Record<NodeId, DefinitionNode>
+    definitionNodes: ReadonlyMap<NodeId, DefinitionNode>
 ) {
     const termMap = useMemo(
         () => getDefinitionTerms(definitionNodes),
@@ -23,7 +23,7 @@ export default function useDefinitionGraph(
 
     const definitionGraphNodes = useMemo(
         () =>
-            Object.values(definitionNodes).map((n) => ({
+            Array.from(definitionNodes.values()).map((n) => ({
                 id: n.id,
                 label: n.label,
             })),
@@ -32,7 +32,7 @@ export default function useDefinitionGraph(
 
     const definitionGraphEdges = useMemo(() => {
         const edges: { id: string; source: string; target: string }[] = [];
-        for (const node of Object.values(definitionNodes)) {
+        for (const node of definitionNodes.values()) {
             const refs = getEdges(node.id, node.description, termMap);
             for (const ref of refs) {
                 const id = `${ref.from}->${ref.to}`;

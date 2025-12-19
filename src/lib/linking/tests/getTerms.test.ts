@@ -2,24 +2,26 @@ import { describe, it, expect } from "vitest";
 import { getDefinitionTerms } from "../getTerms";
 
 describe("getDefinitionTerms", () => {
-    const defs = {
-        a: {
-            id: "1",
-            label: "  Foo ",
-            aliases: ["Foo alias", "  "],
-            description: "",
-            createdAt: "",
-            updatedAt: "",
-        },
-        b: {
-            id: "2",
-            label: "Bar",
-            aliases: ["Baz"],
-            description: "",
-            createdAt: "",
-            updatedAt: "",
-        },
-    };
+    const defs = new Map(
+        Object.entries({
+            a: {
+                id: "1",
+                label: "  Foo ",
+                aliases: ["Foo alias", "  "],
+                description: "",
+                createdAt: "",
+                updatedAt: "",
+            },
+            b: {
+                id: "2",
+                label: "Bar",
+                aliases: ["Baz"],
+                description: "",
+                createdAt: "",
+                updatedAt: "",
+            },
+        })
+    );
 
     it("builds a normalized term → node id map", () => {
         const terms = getDefinitionTerms(defs);
