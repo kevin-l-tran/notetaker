@@ -182,7 +182,7 @@
 /* Right panel */
 .editor-right-panel {
   flex: 1;
-  min-width: 220px;
+  min-width: 0;
   padding: 16px;
   overflow: auto;
 }
@@ -193,6 +193,8 @@
   border: 2px solid;
   border-radius: 10px;
   display: block;
+  overflow: auto;
+  max-width: 100%;
 }
 
 /* Footer */
