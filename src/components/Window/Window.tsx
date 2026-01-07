@@ -252,6 +252,7 @@ function Window({
                 <div
                     onMouseDown={onResizeStart}
                     aria-label="Resize popup"
+                    role="button"
                     style={{
                         position: "absolute",
                         right: 8,

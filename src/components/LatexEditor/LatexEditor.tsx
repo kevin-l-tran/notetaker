@@ -25,7 +25,7 @@ function LatexEditor({
 }: Props) {
     const host = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
-    const onChangeRef = useRef<Props["onChange"]>(null);
+    const onChangeRef = useRef<Props["onChange"]>(onChange);
     const initialDocRef = useRef(description);
 
     useEffect(() => {

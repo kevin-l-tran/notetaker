@@ -1,0 +1,101 @@
+import {
+    Meta,
+    Title,
+    Subtitle,
+    Description,
+    Primary,
+    Controls,
+    Stories,
+} from "@storybook/addon-docs/blocks";
+import * as GraphViewStories from "./GraphView.stories";
+
+<Meta of={GraphViewStories} />
+
+<Title />
+<Subtitle>Interactive Cytoscape renderer for node/edge graphs.</Subtitle>
+
+<Description>
+`GraphView` renders an interactive directed graph using **Cytoscape.js** + the **fcose** layout.
+
+It:
+
+-   Converts `nodes` and `edges` props into Cytoscape elements.
+-   Re-runs the force-directed layout whenever `nodes` or `edges` change.
+-   Computes `outDegree` per node (outgoing edges count) and uses it to bucket node styling.
+-   Supports programmatic **centering** and **highlighting** via `centerNodeId` / `highlightNodeId`.
+
+</Description>
+
+## Usage
+
+```tsx
+import GraphView from "./GraphView";
+
+const nodes = [
+    { id: "topology", label: "Topology" },
+    { id: "metric-space", label: "Metric space" },
+];
+
+const edges = [
+    {
+        id: "edge-topology-metric-space",
+        source: "topology",
+        target: "metric-space",
+    },
+];
+
+<GraphView
+    nodes={nodes}
+    edges={edges}
+    highlightNodeId="metric-space"
+    onNodeDoubleTap={(id) => {
+        // open a detail window, etc.
+        console.log("double tap", id);
+    }}
+    onNodeContextMenu={({ id, clientX, clientY }) => {
+        // open a context menu at the pointer position
+        console.log("context menu", { id, clientX, clientY });
+    }}
+/>;
+```
+
+## Props & events
+
+<Primary />
+<Controls />
+
+Notes:
+
+-   `GraphView` renders to `width: 100%` / `height: 100%`. The parent container must provide a concrete size.
+-   Passing new `nodes`/`edges` arrays will re-run the fcose layout. For large graphs, consider memoizing these arrays in the parent when possible.
+
+## Behavior details
+
+### Layout
+
+When `nodes` or `edges` change, `GraphView`:
+
+1. Recomputes `outDegree` for each node.
+2. Runs an `fcose` layout with label-aware dimensions (`nodeDimensionsIncludeLabels: true`).
+
+### Out-degree styling buckets
+
+Nodes are styled based on their computed `outDegree`:
+
+-   `outDegree <= 2`
+-   `2 < outDegree <= 5`
+-   `outDegree > 5`
+
+(See the **OutDegreeBuckets** story for a minimal example.)
+
+### Centering
+
+When `centerNodeId` is set and a matching node exists, the view animates to center that node and zooms to at least `2`.
+
+### Highlighting
+
+When `highlightNodeId` is set and a matching node exists, the node receives the `search-highlight` class (and any previous highlight is cleared).
+
+## Examples
+
+<Stories />

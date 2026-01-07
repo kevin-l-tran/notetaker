@@ -23,21 +23,6 @@ type Props = {
     ) => void;
 };
 
-/**
- * React hook that manages the set of open definition windows and their z-order.
- *
- * Responsibilities:
- * - Track all open windows as an array of {@link WindowEntry}.
- * - Maintain a separate `zOrder` array of window ids (back → front).
- * - Provide operations to:
- *   - `openWindowForNode` – open a window for a given definition node id.
- *   - `closeWindow` – close a window by id and remove it from z-order.
- *   - `focusWindow` – bring an existing window to the front of the z-stack.
- *
- * This hook does **not** control live window position or size. Those are owned
- * by the `Window` component; only the *initial* placement (`defaultPosition`
- * / `defaultSize`) is stored here.
- */
 function DefinitionWindows({
     windows,
     zOrder,

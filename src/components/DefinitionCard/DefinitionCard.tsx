@@ -23,7 +23,7 @@ function DefinitionCard({ draft, onLinkClick }: Props) {
         shadowRef.current ??= host.attachShadow({ mode: "open" });
         const shadow = shadowRef.current;
 
-        const baseURL = new URL("/latexjs/", window.location.origin).toString()
+        const baseURL = new URL("/latexjs/", document.baseURI).toString();
         mountLatex(shadow, draft.description, baseURL);
     }, [draft.description]);
 

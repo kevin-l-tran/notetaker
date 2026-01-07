@@ -1,0 +1,119 @@
+import {
+    Meta,
+    Title,
+    Subtitle,
+    Description,
+    Primary,
+    Controls,
+    Stories,
+} from "@storybook/addon-docs/blocks";
+import * as DefinitionWindowsStories from "./DefinitionWindows.stories";
+
+<Meta of={DefinitionWindowsStories} />
+
+<Title />
+<Subtitle>
+    Window “manager” view that renders multiple draggable definition windows.
+</Subtitle>
+
+<Description>
+`DefinitionWindows` is a thin composition layer over `Window` + `DefinitionCard`.
+
+Given:
+
+-   a list of open windows (`windows`)
+-   a stacking order (`zOrder`)
+-   a node lookup table (`nodes`)
+
+…it renders one `Window` per entry and places a `DefinitionCard` inside it.
+
+Key behaviors:
+
+-   The root container is a full-screen overlay (`position: "fixed", inset: 0`) with `pointerEvents: "none"` so the underlying app can remain interactive outside windows.
+-   Each window is resolved by `nodeId`; missing nodes are skipped (rendered as `null`).
+-   `isActive` is derived from the last element of `zOrder` (top-most window).
+-   `zIndex` is derived from the index in `zOrder`; if not present, a fallback `zIndexDefault` is used.
+-   `onCloseWindow` / `onFocusWindow` are delegated from each `Window` back up to the parent.
+-   `onLinkClick` is passed through to `DefinitionCard`, so LaTeX links can be used to open/focus other nodes.
+
+</Description>
+
+## Usage
+
+```tsx
+import { useState } from "react";
+
+import type { DefinitionNode } from "../../models/definitionNodes";
+import type { NodeId } from "../../models/nodes";
+
+import DefinitionWindows, { type WindowEntry } from "./DefinitionWindows";
+
+function Example({ nodes }: { nodes: Map<NodeId, DefinitionNode> }) {
+    const [windows, setWindows] = useState<WindowEntry[]>([
+        {
+            id: "window-1",
+            nodeId: "node1",
+            defaultPosition: { x: 80, y: 80 },
+            defaultSize: { w: 520, h: 420 },
+        },
+    ]);
+    const [zOrder, setZOrder] = useState<string[]>(["window-1"]);
+
+    return (
+        <DefinitionWindows
+            windows={windows}
+            zOrder={zOrder}
+            nodes={nodes}
+            onCloseWindow={(id) => {
+                setWindows((ws) => ws.filter((w) => w.id !== id));
+                setZOrder((zs) => zs.filter((zid) => zid !== id));
+            }}
+            onFocusWindow={(id) => {
+                // Common “bring to front” behavior:
+                setZOrder((zs) => [...zs.filter((zid) => zid !== id), id]);
+            }}
+            onLinkClick={(descriptor, position) => {
+                // Resolve descriptor -> nodeId and open a new window with nodeId.
+            }}
+        />
+    );
+}
+```
+
+## Props & events
+
+<Primary />
+<Controls />
+
+Notes:
+
+-   `nodes` is a `Map<NodeId, DefinitionNode>`. Each `WindowEntry.nodeId` is looked up in that map; if the node is missing, that window is skipped.
+-   `zOrder` is treated as the source of truth for stacking and “active” state. The last id is considered active.
+-   `DefinitionWindows` does not manage any state itself; it relies on the parent to keep `windows` and `zOrder` consistent.
+
+## Stacking & focus contract
+
+`DefinitionWindows` computes per-window stacking like this:
+
+-   `isActive = zOrder[zOrder.length - 1] === windowId`
+-   `zIndex = (index in zOrder) + 1`, otherwise a fallback default is used
+
+A typical focus handler moves the focused id to the end of `zOrder`:
+
+```ts
+setZOrder((zs) => [...zs.filter((zid) => zid !== id), id]);
+```
+
+## Link clicks (opening windows from content)
+
+If provided, `onLinkClick(descriptor, position)` is forwarded into `DefinitionCard`. This allows clicking a rendered link inside a window to open another window (often near the click position).
+
+The `Interactive` story demonstrates a simple strategy:
+
+-   resolve `descriptor` by matching `label` or `aliases`
+-   create a new `WindowEntry` using `position` (fallback to a default)
+-   append it to `windows` and bring it to the front by updating `zOrder`
+
+## Examples
+
+<Stories />
