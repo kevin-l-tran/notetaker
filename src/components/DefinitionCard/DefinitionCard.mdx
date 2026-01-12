@@ -1,0 +1,72 @@
+import {
+    Meta,
+    Title,
+    Subtitle,
+    Description,
+    Primary,
+    Controls,
+    Stories,
+} from "@storybook/addon-docs/blocks";
+import * as DefinitionCardStories from "./DefinitionCard.stories";
+
+<Meta of={DefinitionCardStories} />
+
+<Title />
+<Subtitle>
+    Renders a definition draft with LaTeX + autolink support inside a Shadow
+    DOM.
+</Subtitle>
+
+<Description>
+`DefinitionCard` takes a `DefinitionDraft` and renders:
+
+-   **Label** (title)
+-   **Aliases** (comma-separated)
+-   **Description** rendered as LaTeX into a **ShadowRoot** via `mountLatex`
+
+Links rendered by the LaTeX pipeline are expected to use a `.node-link` element with a
+`data-node-descriptor` attribute. Clicking a link calls `onLinkClick(descriptor, position)` where
+`position` is computed from the clicked element’s bounding rectangle (page coordinates).
+
+</Description>
+
+## Usage
+
+```tsx
+import DefinitionCard from "./DefinitionCard";
+
+<DefinitionCard
+    draft={{
+        label: "Topological Basis",
+        aliases: ["basis"],
+        description: String.raw`A basis for a \nodelink{topology}{topology} ...`,
+    }}
+    onLinkClick={(descriptor, position) => {
+        // descriptor: "topology" (example)
+        // position: { x, y } (where the link was clicked)
+    }}
+/>;
+```
+
+## Props & events
+
+<Primary />
+<Controls />
+
+Notes:
+
+-   `draft.description` is rendered into a **ShadowRoot**. Global page styles will not affect the rendered LaTeX content unless they’re injected into the shadow tree by your LaTeX renderer.
+-   `onLinkClick` is optional. If omitted, link clicks do nothing.
+
+## Interaction contract (link clicks)
+
+The click handler looks for a closest `.node-link`, then reads:
+
+-   `data-node-descriptor` → passed as `descriptor`
+-   `getBoundingClientRect()` + page scroll offsets → passed as `position`
+
+If the LaTeX/link renderer is changed, keep this contract aligned (class name + dataset attribute).
+
+## Examples
+
+<Stories />

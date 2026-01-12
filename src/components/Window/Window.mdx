@@ -1,0 +1,88 @@
+import {
+    Meta,
+    Title,
+    Subtitle,
+    Description,
+    Primary,
+    Controls,
+    Stories,
+} from "@storybook/addon-docs/blocks";
+import * as WindowStories from "./Window.stories";
+
+<Meta of={WindowStories} />
+
+<Title />
+<Subtitle>Draggable + resizable wrapper for floating panels.</Subtitle>
+
+<Description>
+`Window` is a layout wrapper intended for floating, desktop-style UI panels. It:
+
+-   Positions itself with **absolute** positioning at `defaultPosition`.
+-   Maintains internal state for **dragging** (via the header) and **resizing** (via the bottom-right handle).
+-   Supports **minimize/restore** (internal state).
+-   Defers **focus/stacking** to a parent via `isActive`, `zIndex`, and `onFocus`.
+
+This component is typically used by a window manager (e.g. `DefinitionWindows`) that decides which window 
+is active and what z-index each window should have.
+
+</Description>
+
+## Usage
+
+```tsx
+import Window from "./Window";
+
+<Window
+    title="Topology"
+    defaultPosition={{ x: 80, y: 80 }}
+    defaultSize={{ w: 520, h: 420 }}
+    isActive={activeId === "topology"}
+    zIndex={activeId === "topology" ? 10 : 1}
+    onFocus={() => setActiveId("topology")}
+    onClose={() => closeWindow("topology")}
+>
+    <div style={{ padding: 12 }}>Content goes here.</div>
+</Window>;
+```
+
+## Props & events
+
+<Primary />
+<Controls />
+
+Notes:
+
+-   `defaultPosition` and `defaultSize` are used **only for initial state**. The window manages its current position/size internally after mount.
+-   `isActive` controls styling (header background) and whether `onFocus` will be called on mouse down.
+-   `zIndex` is applied directly to the root container for stacking.
+-   `onClose` is invoked when the “×” button is clicked.
+
+## Dragging & resizing rules
+
+-   Dragging starts on **header mouse down** and moves the window using global `mousemove`/`mouseup` listeners.
+-   Resizing starts on the **bottom-right handle** and also uses global `mousemove`/`mouseup` listeners.
+-   Position is clamped to stay within the viewport with a `40px` margin:
+
+    -   `0 <= x <= window.innerWidth - 40`
+    -   `0 <= y <= window.innerHeight - 40`
+
+-   Size is constrained to:
+
+    -   minimum `400×300`
+    -   maximum `(window.innerWidth - 40) × (window.innerHeight - 40)`
+
+Implication: on very small viewports, min sizes may exceed the available space.
+
+## Minimize rules
+
+Minimize is **internal state** toggled by the header button:
+
+-   When minimized:
+
+    -   body and resize handle are hidden
+    -   width becomes `"max-content"`
+    -   height becomes `"auto"`
+
+## Examples
+
+<Stories />

@@ -1,0 +1,96 @@
+import {
+    Meta,
+    Title,
+    Subtitle,
+    Description,
+    Primary,
+    Controls,
+    Stories,
+} from "@storybook/addon-docs/blocks";
+import * as TheoremCardStories from "./TheoremCard.stories";
+
+<Meta of={TheoremCardStories} />
+
+<Title />
+<Subtitle>
+    Renders a theorem draft with LaTeX + autolink support inside a Shadow DOM.
+</Subtitle>
+
+<Description>
+`TheoremCard` takes a `TheoremDraft` and renders:
+
+-   **Heading** derived from `type` plus `number` and/or `title`.
+-   **Catchphrase** (optional) rendered as LaTeX (wrapped as `\\emph{(...)}`
+    before rendering).
+-   **Statement** rendered as LaTeX into a **ShadowRoot** via `mountLatex`.
+-   (Currently ignores `draft.proof`, even if provided.)
+
+Links rendered by the LaTeX pipeline are expected to use a `.node-link` element
+with a `data-node-descriptor` attribute. Clicking a link calls
+`onLinkClick(descriptor, position)` where `position` is computed from the clicked
+element’s bounding rectangle (page coordinates).
+
+</Description>
+
+## Usage
+
+```tsx
+import TheoremCard from "./TheoremCard";
+
+<TheoremCard
+    draft={{
+        label: "Gershgorin Disk Theorem",
+        type: "Theorem",
+        number: "5.67",
+        title: "Gershgorin Disk Theorem",
+        catchphrase: "a bound on the spectrum of a square matrix",
+        statement: String.raw`
+            Suppose $T \\in \\mathcal{L}(V)$ and $v_1, \\ldots, v_n$ is a
+            \\nodelink{basis}{basis} of $V$.
+        `,
+    }}
+    onLinkClick={(descriptor, position) => {
+        // descriptor: "basis" (example)
+        // position: { x, y } (where the link was clicked)
+    }}
+/>;
+```
+
+## Props & events
+
+<Primary />
+<Controls />
+
+Notes:
+
+-   `draft.catchphrase` is optional. When present, it is wrapped in
+    `\\emph{(...)}` before rendering.
+-   Both the catchphrase (when present) and the statement are rendered into a
+    **ShadowRoot**. Global page styles will not affect the rendered LaTeX content
+    unless they’re injected into the shadow tree by your LaTeX renderer.
+-   Links are only wired up for click handling in the **statement** section (the
+    catchphrase section is rendered, but does not have the click listener).
+
+## Heading rules
+
+The heading is derived from `draft.type`, `draft.number`, and `draft.title`:
+
+-   If `number` and `title` are present: `"<type> <number>: <title>"`
+-   If only `number` is present: `"<type> <number>"`
+-   If only `title` is present: `"<type>: <title>"`
+
+`TheoremDraft` requires at least one of `number` or `title`.
+
+## Interaction contract (link clicks)
+
+The click handler looks for a closest `.node-link`, then reads:
+
+-   `data-node-descriptor` → passed as `descriptor`
+-   `getBoundingClientRect()` + page scroll offsets → passed as `position`
+
+If the LaTeX/link renderer is changed, keep this contract aligned (class name +
+dataset attribute).
+
+## Examples
+
+<Stories />
