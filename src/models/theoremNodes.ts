@@ -1,4 +1,4 @@
-import type { Node } from "./nodes";
+import type { Node, NodeId } from "./nodes";
 
 type HasNumberOrTitle =
     | { number: string; title?: string }
@@ -13,6 +13,7 @@ export type TheoremNode = Node &
     };
 
 export type TheoremDraft = HasNumberOrTitle & {
+    id?: NodeId;
     label: string;
     type: string;
     catchphrase?: string;
