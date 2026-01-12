@@ -151,7 +151,6 @@ export function mountLatex(
         return { ok: true };
     } catch (e: unknown) {
         const pre = document.createElement("pre");
-        console.error(e);
 
         if (isLatexParseError(e) && e.location) {
             const { start } = e.location;
