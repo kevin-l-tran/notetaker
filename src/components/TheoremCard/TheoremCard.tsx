@@ -30,18 +30,20 @@ function TheoremCard({ draft, onLinkClick }: Props) {
     const heading = buildHeading(draft);
 
     useEffect(() => {
-        if (!draft.catchphrase) return;
-
         const host = catchphraseHostRef.current;
         if (!host) return;
 
-        catchphraseShadowRef.current ??= host.attachShadow({ mode: "open" });
-        const shadow = catchphraseShadowRef.current;
+        const shadow = host.shadowRoot ?? host.attachShadow({ mode: "open" });
+        catchphraseShadowRef.current = shadow;
+
+        const text = draft.catchphrase?.trim();
+        if (!text) {
+            shadow.replaceChildren();
+            return;
+        }
 
         const baseURL = new URL("/latexjs/", document.baseURI).toString();
-
-        const formattedCatchphrase = "\\emph{(" + draft.catchphrase + ")}";
-        mountLatex(shadow, formattedCatchphrase, baseURL);
+        mountLatex(shadow, `\\emph{(${text})}`, baseURL);
     }, [draft.catchphrase]);
 
     useEffect(() => {
@@ -93,14 +95,17 @@ function TheoremCard({ draft, onLinkClick }: Props) {
                 </h2>
 
                 {draft.catchphrase ? (
-                    <div ref={catchphraseHostRef}
+                    <div
+                        ref={catchphraseHostRef}
                         style={{
                             margin: 0,
                             fontSize: "18px",
                             textAlign: "center",
+                            display: draft.catchphrase?.trim()
+                                ? "block"
+                                : "none",
                         }}
-                    >
-                    </div>
+                    ></div>
                 ) : null}
 
                 <hr style={{ marginBlock: 20 }} />
