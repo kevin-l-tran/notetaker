@@ -16,12 +16,14 @@ type Props = {
     description?: string;
     onChange?: (description: string) => void;
     ariaLabelledBy?: string;
+    simple?: boolean;
 };
 
 function LatexEditor({
     description = "\\documentclass{article}\n\\begin{document}\nEnter your description here!\n\\end{document}",
     onChange,
     ariaLabelledBy,
+    simple = false,
 }: Props) {
     const host = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
@@ -47,24 +49,36 @@ function LatexEditor({
             ariaLabelledBy ? { "aria-labelledby": ariaLabelledBy } : {}
         );
 
-        const state = EditorState.create({
-            doc: initialDocRef.current,
-            extensions: [
-                contentA11y,
-                minimalSetup,
-                fullSize,
-                updateListener,
-                EditorView.lineWrapping,
-                highlightActiveLine(),
-                lineNumbers(),
-                foldGutter(),
-                latex(),
-                keymap.of([
-                    { key: "Tab", run: acceptCompletion },
-                    indentWithTab,
-                ]),
-            ],
-        });
+        const state = simple
+            ? EditorState.create({
+                  doc: initialDocRef.current,
+                  extensions: [
+                      contentA11y,
+                      minimalSetup,
+                      fullSize,
+                      updateListener,
+                      EditorView.lineWrapping,
+                      latex(),
+                  ],
+              })
+            : EditorState.create({
+                  doc: initialDocRef.current,
+                  extensions: [
+                      contentA11y,
+                      minimalSetup,
+                      fullSize,
+                      updateListener,
+                      EditorView.lineWrapping,
+                      highlightActiveLine(),
+                      lineNumbers(),
+                      foldGutter(),
+                      latex(),
+                      keymap.of([
+                          { key: "Tab", run: acceptCompletion },
+                          indentWithTab,
+                      ]),
+                  ],
+              });
 
         const view = new EditorView({ state, parent: host.current });
         viewRef.current = view;
@@ -73,7 +87,7 @@ function LatexEditor({
             viewRef.current = null;
             view.destroy();
         };
-    }, [ariaLabelledBy]);
+    }, [ariaLabelledBy, simple]);
 
     useEffect(() => {
         onChangeRef.current = onChange;

@@ -29,6 +29,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Basic: Story = {};
 
+export const SimpleMode: Story = {
+    args: {
+        simple: true,
+    },
+};
+
 export const LongContent: Story = {
     args: {
         description: Array(20)
