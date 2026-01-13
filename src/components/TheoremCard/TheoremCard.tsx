@@ -101,7 +101,7 @@ function TheoremCard({ draft, onLinkClick }: Props) {
                             margin: 0,
                             fontSize: "18px",
                             textAlign: "center",
-                            display: draft.catchphrase?.trim()
+                            display: draft.catchphrase.trim()
                                 ? "block"
                                 : "none",
                         }}
