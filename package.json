@@ -3,15 +3,22 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix"
+    ]
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc -b",
     "lint": "eslint .",
+    "lint-staged": "lint-staged",
     "preview": "vite preview",
     "test": "vitest",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "prepare": "husky"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.0",
@@ -59,7 +66,9 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "eslint-plugin-storybook": "^10.1.11",
     "globals": "^16.5.0",
+    "husky": "^9.1.7",
     "jsdom": "^27.3.0",
+    "lint-staged": "^16.2.7",
     "playwright": "^1.57.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.3",
