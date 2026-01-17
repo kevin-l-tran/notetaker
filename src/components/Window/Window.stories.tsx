@@ -44,7 +44,6 @@ export const Basic: Story = {
         defaultPosition: { x: 80, y: 80 },
         defaultSize: { w: 520, h: 420 },
         zIndex: 1,
-        isActive: true,
         children: (
             <div style={{ padding: 12 }}>
                 <p>Put any content here.</p>
