@@ -13,8 +13,8 @@ type Props = {
 };
 
 function buildHeading(draft: TheoremDraft) {
-    const name = draft.title?.trim();
-    const number = draft.number?.trim();
+    const name = draft.title.trim();
+    const number = draft.number.trim();
 
     if (number && name) return `${draft.type} ${number}: ${name}`;
     if (number) return `${draft.type} ${number}`;
@@ -93,14 +93,14 @@ function TheoremCard({ draft, onLinkClick }: Props) {
                 </h2>
 
                 {draft.catchphrase ? (
-                    <div ref={catchphraseHostRef}
+                    <div
+                        ref={catchphraseHostRef}
                         style={{
                             margin: 0,
                             fontSize: "18px",
                             textAlign: "center",
                         }}
-                    >
-                    </div>
+                    ></div>
                 ) : null}
 
                 <hr style={{ marginBlock: 20 }} />

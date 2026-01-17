@@ -29,6 +29,7 @@ const draft = {
         Then each \nodelink{eigenvalue}{eigenvalue} of $T$ is contained in some \nodelink{gershgorin disk}{Gershgorin disk} of $T$
         with respect to the basis $v_1, \ldots, v_n$.
         `,
+    proof: String.raw``, // Proof not yet implemented
 } satisfies TheoremDraft;
 
 export const Basic: Story = {
@@ -39,18 +40,18 @@ export const Basic: Story = {
 
 export const NoNumber: Story = {
     args: {
-        draft: { ...draft, number: undefined },
+        draft: { ...draft, number: "" },
     },
 };
 
 export const NoTitle: Story = {
     args: {
-        draft: { ...draft, title: undefined },
+        draft: { ...draft, title: "" },
     },
 };
 
 export const NoCatchphrase: Story = {
-    args: { draft: { ...draft, catchphrase: undefined } },
+    args: { draft: { ...draft, catchphrase: "" } },
 };
 
 export const FailedCatchphraseLatex: Story = {
