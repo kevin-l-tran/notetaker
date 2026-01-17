@@ -1,21 +1,20 @@
 import type { Node } from "./nodes";
 
-type HasNumberOrTitle =
-    | { number: string; title?: string }
-    | { number?: string; title: string };
+export type TheoremNode = Node & {
+    number: string;
+    title: string;
+    type: string;
+    catchphrase: string;
+    statement: string;
+    proof: string;
+};
 
-export type TheoremNode = Node &
-    HasNumberOrTitle & {
-        type: string;
-        catchphrase?: string;
-        statement: string;
-        proof?: string;
-    };
-
-export type TheoremDraft = HasNumberOrTitle & {
+export type TheoremDraft = {
+    number: string;
+    title: string;
     label: string;
     type: string;
-    catchphrase?: string;
+    catchphrase: string;
     statement: string;
-    proof?: string;
+    proof: string;
 };

@@ -14,7 +14,7 @@ type Props = {
     onClose?: () => void;
     zIndex?: number;
     onFocus?: () => void;
-    isActive: boolean;
+    isActive?: boolean;
 };
 
 function Window({

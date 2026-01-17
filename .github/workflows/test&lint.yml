@@ -26,11 +26,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright
+      - name: Install Playwright # for storybook tests; currently none are implemented
         run: pnpm exec playwright install
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run unit tests
+        run: pnpm test:unit
+
+      - name: Run integration tests
+        run: pnpm test:integration
 
   lint:
     runs-on: ubuntu-latest
