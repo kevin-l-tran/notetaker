@@ -20,6 +20,54 @@ type Props = {
     }) => void;
 };
 
+const BASE_STYLES = [
+    {
+        selector: "node",
+        style: {
+            "background-color": "#89a",
+            "font-size": 12,
+            label: "data(label)",
+            "min-zoomed-font-size": 10,
+        },
+    },
+    {
+        selector: "node[outDegree <= 2]",
+        style: { "background-color": "#c6dbef" },
+    },
+    {
+        selector: "node[outDegree > 2][outDegree <= 5]",
+        style: { "background-color": "#6baed6" },
+    },
+    {
+        selector: "node[outDegree > 5]",
+        style: { "background-color": "#08519c" },
+    },
+    {
+        selector: "node.search-highlight",
+        style: {
+            "background-color": "#f97316",
+            width: 50,
+            height: 50,
+        },
+    },
+    {
+        selector: "edge",
+        style: {
+            width: 1,
+            "curve-style": "straight",
+            "target-arrow-shape": "triangle",
+            "line-color": "#888",
+            "target-arrow-color": "#888",
+            "arrow-scale": 1,
+        },
+    },
+] as const;
+
+const MOVING_STYLES = [
+    { selector: "node", style: { label: "" } },
+    { selector: "edge", style: { "target-arrow-shape": "none" } },
+] as const;
+
 function GraphView({
     nodes,
     edges,
@@ -38,12 +86,12 @@ function GraphView({
                 data: { id: e.id, source: e.source, target: e.target },
             })),
         ],
-        [nodes, edges]
+        [nodes, edges],
     );
 
     const handlers = useMemo(
         () => ({ onNodeDoubleTap, onNodeContextMenu }),
-        [onNodeDoubleTap, onNodeContextMenu]
+        [onNodeDoubleTap, onNodeContextMenu],
     );
     useCytoscapeEvents(cyRef, cyReady, handlers);
 
@@ -53,47 +101,7 @@ function GraphView({
         setCyReady(true);
 
         cy.style()
-            .fromJson([
-                {
-                    selector: "node",
-                    style: {
-                        "background-color": "#89a",
-                        "font-size": 12,
-                        label: "data(label)",
-                    },
-                },
-                {
-                    selector: "node[outDegree <= 2]",
-                    style: { "background-color": "#c6dbef" },
-                },
-                {
-                    selector: "node[outDegree > 2][outDegree <= 5]",
-                    style: { "background-color": "#6baed6" },
-                },
-                {
-                    selector: "node[outDegree > 5]",
-                    style: { "background-color": "#08519c" },
-                },
-                {
-                    selector: "node.search-highlight",
-                    style: {
-                        "background-color": "#f97316",
-                        width: 50,
-                        height: 50,
-                    },
-                },
-                {
-                    selector: "edge",
-                    style: {
-                        width: 1,
-                        "curve-style": "straight",
-                        "target-arrow-shape": "triangle",
-                        "line-color": "#888",
-                        "target-arrow-color": "#888",
-                        "arrow-scale": 1.2,
-                    },
-                },
-            ])
+            .fromJson([...BASE_STYLES])
             .update();
     };
 
@@ -123,6 +131,50 @@ function GraphView({
     }, [nodes, edges]);
 
     useEffect(() => {
+        const cy = cyRef.current;
+        if (!cy) return;
+
+        let moving = false;
+        let stopTimer: number | undefined;
+        let rafPending = false;
+
+        const setMoving = (isMoving: boolean) => {
+            if (moving === isMoving) return;
+            moving = isMoving;
+
+            cy.style()
+                .fromJson(
+                    isMoving
+                        ? [...BASE_STYLES, ...MOVING_STYLES]
+                        : [...BASE_STYLES],
+                )
+                .update();
+        };
+
+        const onViewport = () => {
+            if (rafPending) return;
+            rafPending = true;
+
+            requestAnimationFrame(() => {
+                rafPending = false;
+
+                setMoving(true);
+                window.clearTimeout(stopTimer);
+                stopTimer = window.setTimeout(() => {
+                    setMoving(false);
+                }, 250);
+            });
+        };
+
+        cy.on("pan zoom", onViewport);
+
+        return () => {
+            cy.off("pan zoom", onViewport);
+            window.clearTimeout(stopTimer);
+        };
+    }, [cyReady]);
+
+    useEffect(() => {
         if (!cyRef.current || !centerNodeId) return;
         const cy = cyRef.current;
 
@@ -134,7 +186,7 @@ function GraphView({
                 center: { eles: node },
                 zoom: Math.max(cy.zoom(), 2),
             },
-            { duration: 400 }
+            { duration: 400 },
         );
     }, [centerNodeId]);
 
@@ -161,8 +213,7 @@ function GraphView({
             minZoom={0.1}
             maxZoom={2}
             pixelRatio={1}
-            motionBlur
-            motionBlurOpacity={0.15}
+            motionBlur={false}
         />
     );
 }

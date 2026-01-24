@@ -44,7 +44,7 @@ export default function App() {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingNodeId, setEditingNodeId] = useState<NodeId | null>(null);
     const editingNode = editingNodeId
-        ? definitionNodes.get(editingNodeId) ?? null
+        ? (definitionNodes.get(editingNodeId) ?? null)
         : null;
 
     const [searchTerm, setSearchTerm] = useState("");
@@ -53,7 +53,7 @@ export default function App() {
 
     const onLinkClick = (
         descriptor: string,
-        position?: { x: number; y: number }
+        position?: { x: number; y: number },
     ) => {
         const matches = Array.from(definitionNodes.values()).filter((n) => {
             const normalizedTerms = [
@@ -87,7 +87,7 @@ export default function App() {
             definitionNodes: Record<string, DefinitionNode>;
         };
         const nodes = new Map<string, DefinitionNode>(
-            Object.entries(data.definitionNodes)
+            Object.entries(data.definitionNodes),
         );
 
         loadDefinitionNodes(nodes);
@@ -138,6 +138,8 @@ export default function App() {
                 position: "fixed",
                 inset: 0,
                 display: "grid",
+                gridTemplateRows: "1fr auto",
+                minHeight: 0,
             }}
         >
             <div
@@ -186,7 +188,7 @@ export default function App() {
                 }}
                 onDelete={(id) => {
                     const ok = window.confirm(
-                        "Are you sure you want to delete this definition?"
+                        "Are you sure you want to delete this definition?",
                     );
                     if (!ok) return;
                     deleteNode(id);
@@ -215,7 +217,7 @@ export default function App() {
                         PREVIEW_NODE_ID,
                         draft.description,
                         definitionTerms,
-                        definitionAC
+                        definitionAC,
                     )
                 }
             />
@@ -245,7 +247,7 @@ export default function App() {
                             editingNode.id,
                             draft.description,
                             definitionTerms,
-                            definitionAC
+                            definitionAC,
                         )
                     }
                 />
