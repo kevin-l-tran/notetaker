@@ -47,8 +47,8 @@ export default function useCytoscapeEvents(
             const handleTap = (evt: cytoscape.EventObject) => {
                 handlers.onNodeDoubleTap?.(evt.target.id());
             };
-            cy.on("dbltap", "node", handleTap);
-            disposers.push(() => cy.off("dbltap", "node", handleTap));
+            cy.on("tap", "node", handleTap);
+            disposers.push(() => cy.off("tap", "node", handleTap));
         }
 
         if (handlers.onNodeContextMenu) {
